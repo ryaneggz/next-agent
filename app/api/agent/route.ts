@@ -1,46 +1,41 @@
-import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
+import { NextRequest, NextResponse } from 'next/server';
+import { classifyIntent } from '@/lib/classify';
+import { tools } from '@/lib/tools';
+import { updateMemory } from '@/lib/memory';
 
-interface Event {
-  function: string;
-  args: any;
-  content: string;
-}
+let threadXML = ""; // Simple in-memory store. Replace with DB or file store as needed.
 
-function handleEvent(event: Event = { function: "done_for_now", args: {}, content: "" }) {
-  if (event.function === "done_for_now") {
-    return {
-      function: "done_for_now",
-      args: {
-        query: event.args.query,
-        threadId: event.args.threadId,
-      },
-      content: "The weather in Dallas is 70 degrees",
-    };
-  } else if (event.function === "get_weather") {
-    return {
-      function: "get_weather",
-      args: {
-        location: "Dallas",
-      },
-    };
-  }
-}
-
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await req.json();
+    const { input } = body;
 
-    const event = handleEvent(body);
+    if (!input) {
+      return NextResponse.json({ error: "Missing input" }, { status: 400 });
+    }
+
+    threadXML = await updateMemory(threadXML, 'user', input);
+
+    const { tool, args } = await classifyIntent(input);
+
+    let output: string;
+    if (tool in tools) {
+      // TypeScript-safe access
+      output = tools[tool as keyof typeof tools](args);
+    } else {
+      output = `Unknown tool: ${tool}`;
+    }
+
+    threadXML = await updateMemory(threadXML, 'assistant', output);
 
     return NextResponse.json({ 
-      event,
-      success: true
+      response: output, 
+      memory: threadXML 
     });
   } catch (error) {
-    console.error('Error in agent route:', error);
+    console.error('API Error:', error);
     return NextResponse.json(
-      { message: "Error processing request", success: false },
+      { error: "Internal server error" }, 
       { status: 500 }
     );
   }
