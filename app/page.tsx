@@ -6,7 +6,6 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [log, setLog] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [memory, setMemory] = useState<string>('');
 
   const handleSubmit = async () => {
     if (!input.trim()) return;
@@ -24,12 +23,7 @@ export default function Home() {
       });
       const data = await res.json();
       setLog(prev => [...prev, `Agent: ${data.response}`]);
-      
-      // Update memory state with the XML response
-      if (data.memory) {
-        setMemory(data.memory);
-      }
-    } catch (error) {
+    } catch {
       setLog(prev => [...prev, `Error: Failed to get response`]);
     } finally {
       setIsLoading(false);
@@ -43,18 +37,6 @@ export default function Home() {
     }
   };
 
-  const formatXML = (xmlString: string) => {
-    if (!xmlString) return '';
-    
-    // Simple XML formatting for display
-    return xmlString
-      .replace(/></g, '>\n<')
-      .replace(/^\s*\n/gm, '')
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0)
-      .join('\n');
-  };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -78,7 +60,6 @@ export default function Home() {
               <div className="space-y-4">
                 {log.map((line, i) => {
                   const isUser = line.startsWith('You:');
-                  const isAgent = line.startsWith('Agent:');
                   const isError = line.startsWith('Error:');
                   const content = line.substring(line.indexOf(':') + 1).trim();
                   
@@ -161,22 +142,6 @@ export default function Home() {
           Powered by Next.js & AI
         </div>
 
-        {/* XML Memory Display */}
-        {memory && (
-          <div className="mt-6 bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="bg-gray-800 text-white px-6 py-3">
-              <h3 className="text-lg font-semibold flex items-center">
-                <span className="mr-2">🧠</span>
-                Agent Memory (XML)
-              </h3>
-            </div>
-            <div className="p-6">
-              <pre className="bg-gray-50 rounded-lg p-4 overflow-x-auto text-sm text-gray-800 border">
-                <code>{formatXML(memory)}</code>
-              </pre>
-            </div>
-          </div>
-        )}
       </div>
     </main>
   );
