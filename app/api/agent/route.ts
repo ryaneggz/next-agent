@@ -16,14 +16,20 @@ export async function POST(req: NextRequest) {
 
     threadXML = await updateMemory(threadXML, 'user', input);
 
-    const { tool, args } = await classifyIntent(input);
+    const { intent, args } = await classifyIntent(input);
 
     let output: string;
-    if (tool in tools) {
-      // TypeScript-safe access
-      output = tools[tool as keyof typeof tools](args);
+    if (intent in tools) {
+      // TypeScript-safe access - ensure the args match the tool's expected parameters
+      if (intent === 'get_weather' && 'location' in args) {
+        output = tools.get_weather(args as { location: string });
+      } else if (intent === 'query' && 'query' in args) {
+        output = tools.query(args as { query: string });
+      } else {
+        output = `Invalid arguments for tool: ${intent}`;
+      }
     } else {
-      output = `Unknown tool: ${tool}`;
+      output = `Unknown tool: ${intent}`;
     }
 
     threadXML = await updateMemory(threadXML, 'assistant', output);
