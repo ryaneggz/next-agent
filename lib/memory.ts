@@ -30,7 +30,7 @@ export async function addEvent(xml: string, intent: string, content: string): Pr
     _: content
   });
 
-  const builder = new Builder();
+  const builder = new Builder({ headless: true });
   return builder.buildObject(thread);
 }
 
