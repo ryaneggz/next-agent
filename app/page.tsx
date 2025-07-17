@@ -46,14 +46,29 @@ export default function Home() {
   const formatXML = (xmlString: string) => {
     if (!xmlString) return '';
     
-    // Simple XML formatting for display
-    return xmlString
+    // Simple XML formatting for display, removing outer XML tag
+    const formatted = xmlString
       .replace(/></g, '>\n<')
       .replace(/^\s*\n/gm, '')
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.length > 0)
       .join('\n');
+    
+    // Remove outer XML tag (e.g., <thread>...</thread>)
+    const lines = formatted.split('\n');
+    if (lines.length > 2) {
+      // Remove first and last lines if they are opening and closing tags
+      const firstLine = lines[0].trim();
+      const lastLine = lines[lines.length - 1].trim();
+      
+      if (firstLine.startsWith('<') && !firstLine.startsWith('</') && 
+          lastLine.startsWith('</') && firstLine.replace('<', '</') === lastLine) {
+        return lines.slice(1, -1).join('\n');
+      }
+    }
+    
+    return formatted;
   };
 
   return (
