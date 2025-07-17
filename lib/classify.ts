@@ -56,7 +56,7 @@ export async function getLLMResponse(threadXML: string): Promise<string> {
   
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4",
+    model: "gpt-4.1-mini",
     messages: messages.map(msg => ({
       role: msg.role,
       content: msg.content
