@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { classifyIntent } from '@/lib/classify';
+import { classifyIntent, getLLMResponse } from '@/lib/classify';
 import { tools } from '@/lib/tools';
-import { updateMemory } from '@/lib/memory';
+import { addEvent } from '@/lib/memory';
 
 let threadXML = ""; // Simple in-memory store. Replace with DB or file store as needed.
 
@@ -14,28 +14,52 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing input" }, { status: 400 });
     }
 
-    threadXML = await updateMemory(threadXML, 'user', input);
+    // Add user input as an event
+    threadXML = await addEvent(threadXML, 'user_input', input);
 
-    const { intent, args } = await classifyIntent(input);
+    // Tool execution loop
+    let currentInput = input;
+    let maxIterations = 5; // Prevent infinite loops
+    let iteration = 0;
 
-    let output: string;
-    if (intent in tools) {
-      // TypeScript-safe access - ensure the args match the tool's expected parameters
-      if (intent === 'get_weather' && 'location' in args) {
-        output = tools.get_weather(args as { location: string });
-      } else if (intent === 'query' && 'query' in args) {
-        output = tools.query(args as { query: string });
-      } else {
-        output = `Invalid arguments for tool: ${intent}`;
+    while (iteration < maxIterations) {
+      const { intent, args } = await classifyIntent(currentInput);
+      
+      if (intent === 'none') {
+        // No more tools to execute, break the loop
+        break;
       }
-    } else {
-      output = `Unknown tool: ${intent}`;
+      
+      if (intent in tools) {
+        let toolOutput: string;
+        
+        // Execute the specific tool
+        if (intent === 'get_weather' && 'location' in args) {
+          toolOutput = tools.get_weather(args as { location: string });
+        } else {
+          toolOutput = `Invalid arguments for tool: ${intent}`;
+        }
+        
+        // Add tool execution as an event
+        threadXML = await addEvent(threadXML, intent, toolOutput);
+        
+        // After executing a tool, ask if any additional tools are needed
+        // instead of re-classifying the original input
+        currentInput = "Are there any additional tools needed based on the current conversation?";
+      } else {
+        // Unknown tool, break the loop
+        break;
+      }
+      
+      iteration++;
     }
 
-    threadXML = await updateMemory(threadXML, 'assistant', output);
+    // Final LLM response after all tools have been executed
+    const llmResponse = await getLLMResponse(threadXML + "\n\n Response:");
+    threadXML = await addEvent(threadXML, 'llm_response', llmResponse);
 
     return NextResponse.json({ 
-      response: output, 
+      response: llmResponse, 
       memory: threadXML 
     });
   } catch (error) {
