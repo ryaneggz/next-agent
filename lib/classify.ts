@@ -40,13 +40,13 @@ Do not include any other text or explanation.
 }
 
 // Function for vanilla LLM responses using event-based memory
-export async function getLLMResponse(threadXML: string): Promise<string> {
+export async function getLLMResponse(threadXML: string, systemMessage?: string): Promise<string> {
   
   // Convert events to conversation format for LLM
   const messages: { role: "user" | "assistant"|"system", content: string }[] = [
     {
       role: "system",
-      content: "You are a helpful AI assistant. Respond naturally and conversationally based on the conversation history."
+      content: systemMessage || "You are a helpful AI assistant. Respond naturally and conversationally based on the conversation history."
     },
 		{
 			role: "user",

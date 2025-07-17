@@ -8,7 +8,7 @@ let threadXML = ""; // Simple in-memory store. Replace with DB or file store as 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { input } = body;
+    const { input, systemMessage } = body;
 
     if (!input) {
       return NextResponse.json({ error: "Missing input" }, { status: 400 });
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Final LLM response after all tools have been executed
-    const llmResponse = await getLLMResponse(threadXML + "\n\n Response:");
+    const llmResponse = await getLLMResponse(threadXML + "\n\n Response:", systemMessage);
     threadXML = await addEvent(threadXML, 'llm_response', llmResponse);
 
     return NextResponse.json({ 
