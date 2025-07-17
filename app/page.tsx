@@ -29,7 +29,7 @@ export default function Home() {
       if (data.memory) {
         setMemory(data.memory);
       }
-    } catch (error) {
+    } catch {
       setLog(prev => [...prev, `Error: Failed to get response`]);
     } finally {
       setIsLoading(false);
@@ -78,7 +78,6 @@ export default function Home() {
               <div className="space-y-4">
                 {log.map((line, i) => {
                   const isUser = line.startsWith('You:');
-                  const isAgent = line.startsWith('Agent:');
                   const isError = line.startsWith('Error:');
                   const content = line.substring(line.indexOf(':') + 1).trim();
                   

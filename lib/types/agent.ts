@@ -17,7 +17,7 @@ export interface AgentConfig {
   maxTurns?: number;
   temperature?: number;
   model?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AgentResponse {
@@ -37,8 +37,8 @@ export interface LLMFunction {
 export interface ToolFunction {
   name: string;
   description: string;
-  parameters: Record<string, any>;
-  handler: (args: any) => Promise<string>;
+  parameters: Record<string, unknown>;
+  handler: (args: unknown) => Promise<string>;
 }
 
 export interface AgentRequest {

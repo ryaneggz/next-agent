@@ -10,7 +10,7 @@ interface GetWeather {
 
 interface NoTool {
   intent: "none";
-  args: {};
+  args: Record<string, never>;
 }
 
 type ClassificationResult = GetWeather | NoTool;
