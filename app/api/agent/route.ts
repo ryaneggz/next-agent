@@ -1,46 +1,71 @@
-import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
+import { NextRequest, NextResponse } from 'next/server';
+import { classifyIntent, getLLMResponse } from '@/lib/classify';
+import { tools } from '@/lib/tools';
+import { addEvent } from '@/lib/memory';
 
-interface Event {
-  function: string;
-  args: any;
-  content: string;
-}
+let threadXML = ""; // Simple in-memory store. Replace with DB or file store as needed.
 
-function handleEvent(event: Event = { function: "done_for_now", args: {}, content: "" }) {
-  if (event.function === "done_for_now") {
-    return {
-      function: "done_for_now",
-      args: {
-        query: event.args.query,
-        threadId: event.args.threadId,
-      },
-      content: "The weather in Dallas is 70 degrees",
-    };
-  } else if (event.function === "get_weather") {
-    return {
-      function: "get_weather",
-      args: {
-        location: "Dallas",
-      },
-    };
-  }
-}
-
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await req.json();
+    const { input } = body;
 
-    const event = handleEvent(body);
+    if (!input) {
+      return NextResponse.json({ error: "Missing input" }, { status: 400 });
+    }
+
+    // Add user input as an event
+    threadXML = await addEvent(threadXML, 'user_input', input);
+
+    // Tool execution loop
+    let currentInput = input;
+    let maxIterations = 5; // Prevent infinite loops
+    let iteration = 0;
+
+    while (iteration < maxIterations) {
+      const { intent, args } = await classifyIntent(currentInput);
+      
+      if (intent === 'none') {
+        // No more tools to execute, break the loop
+        break;
+      }
+      
+      if (intent in tools) {
+        let toolOutput: string;
+        
+        // Execute the specific tool
+        if (intent === 'get_weather' && 'location' in args) {
+          toolOutput = tools.get_weather(args as { location: string });
+        } else {
+          toolOutput = `Invalid arguments for tool: ${intent}`;
+        }
+        
+        // Add tool execution as an event
+        threadXML = await addEvent(threadXML, intent, toolOutput);
+        
+        // After executing a tool, ask if any additional tools are needed
+        // instead of re-classifying the original input
+        currentInput = "Are there any additional tools needed based on the current conversation?";
+      } else {
+        // Unknown tool, break the loop
+        break;
+      }
+      
+      iteration++;
+    }
+
+    // Final LLM response after all tools have been executed
+    const llmResponse = await getLLMResponse(threadXML + "\n\n Response:");
+    threadXML = await addEvent(threadXML, 'llm_response', llmResponse);
 
     return NextResponse.json({ 
-      event,
-      success: true
+      response: llmResponse, 
+      memory: threadXML 
     });
   } catch (error) {
-    console.error('Error in agent route:', error);
+    console.error('API Error:', error);
     return NextResponse.json(
-      { message: "Error processing request", success: false },
+      { error: "Internal server error" }, 
       { status: 500 }
     );
   }

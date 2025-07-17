@@ -1,91 +1,183 @@
 "use client";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+
+import { useState } from 'react';
 
 export default function Home() {
-  const [input, setInput] = useState("");
-  const [systemInput, setSystemInput] = useState("You are a helpful assistant that can use tools to help users.");
-  const [threadId, setThreadId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
+  const [input, setInput] = useState('');
+  const [log, setLog] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [memory, setMemory] = useState<string>('');
 
-  async function handleSend(e: React.FormEvent) {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!input.trim()) return;
+    
+    setIsLoading(true);
+    const userMessage = input;
+    setLog(prev => [...prev, `You: ${userMessage}`]);
+    setInput('');
 
-    // Add user message
-    setMessages((msgs) => [...msgs, { role: "user", content: input }]);
+    try {
+      const res = await fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: userMessage }),
+      });
+      const data = await res.json();
+      setLog(prev => [...prev, `Agent: ${data.response}`]);
+      
+      // Update memory state with the XML response
+      if (data.memory) {
+        setMemory(data.memory);
+      }
+    } catch (error) {
+      setLog(prev => [...prev, `Error: Failed to get response`]);
+    } finally {
+      setIsLoading(false);
+    } 
+  };
 
-    // Send to backend
-    const res = await fetch("/api/agent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        userInput: input,
-        systemInput: systemInput,
-        threadId: threadId 
-      }),
-    });
-    const data = await res.json();
-
-    // Store threadId from first response
-    if (data.threadId && !threadId) {
-      setThreadId(data.threadId);
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
     }
+  };
 
-    // Add response message
-    setMessages((msgs) => [
-      ...msgs,
-      { role: "assistant", content: data.message || "No response" },
-    ]);
-    setInput("");
-  }
+  const formatXML = (xmlString: string) => {
+    if (!xmlString) return '';
+    
+    // Simple XML formatting for display
+    return xmlString
+      .replace(/></g, '>\n<')
+      .replace(/^\s*\n/gm, '')
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .join('\n');
+  };
 
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start w-full max-w-md">
-        <div className="flex flex-col gap-2 w-full min-h-[200px] border rounded p-4 bg-white">
-          {threadId && (
-            <div className="text-xs text-gray-500 mb-2 border-b pb-2">
-              Thread ID: {threadId}
-            </div>
-          )}
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={msg.role === "user" ? "text-right text-blue-700" : "text-left text-gray-700"}
-            >
-              <span className="block">{msg.content}</span>
-            </div>
-          ))}
-        </div>
-        
-        <div className="flex flex-col gap-2 w-full">
-          <input
-            className="w-full border rounded px-3 py-2 text-sm"
-            value={systemInput}
-            onChange={(e) => setSystemInput(e.target.value)}
-            placeholder="System prompt (optional)..."
-            disabled={!!threadId} // Disable after first message
-          />
-          {threadId && (
-            <p className="text-xs text-gray-500">System prompt is set for this conversation</p>
-          )}
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">AI Agent Chat</h1>
+          <p className="text-gray-600">Interact with your intelligent assistant</p>
         </div>
 
-        <form onSubmit={handleSend} className="flex gap-2 w-full">
-          <input
-            className="flex-1 border rounded px-3 py-2"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
-            autoFocus
-          />
-          <Button type="submit">Send</Button>
-        </form>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <p>This is the footer</p>
-      </footer>
-    </div>
+        {/* Chat Container */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          {/* Chat Messages */}
+          <div className="h-96 overflow-y-auto p-6 bg-gray-50">
+            {log.length === 0 ? (
+              <div className="text-center text-gray-500 mt-20">
+                <div className="text-6xl mb-4">🤖</div>
+                <p className="text-lg">Start a conversation with your AI agent!</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {log.map((line, i) => {
+                  const isUser = line.startsWith('You:');
+                  const isAgent = line.startsWith('Agent:');
+                  const isError = line.startsWith('Error:');
+                  const content = line.substring(line.indexOf(':') + 1).trim();
+                  
+                  return (
+                    <div
+                      key={i}
+                      className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                          isUser
+                            ? 'bg-blue-500 text-white rounded-br-md'
+                            : isError
+                            ? 'bg-red-100 text-red-700 border border-red-200 rounded-bl-md'
+                            : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md shadow-sm'
+                        }`}
+                      >
+                        {!isUser && (
+                          <div className="flex items-center mb-1">
+                            <span className="text-xs font-medium text-gray-500">
+                              {isError ? '⚠️ Error' : '🤖 Agent'}
+                            </span>
+                          </div>
+                        )}
+                        <p className="text-sm leading-relaxed">{content}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-white text-gray-800 border border-gray-200 rounded-2xl rounded-bl-md shadow-sm px-4 py-2">
+                      <div className="flex items-center space-x-1">
+                        <span className="text-xs font-medium text-gray-500 mb-1 block">🤖 Agent</span>
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Input Area */}
+          <div className="p-4 bg-white border-t border-gray-200">
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                disabled={isLoading}
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+              <button
+                onClick={handleSubmit}
+                disabled={isLoading || !input.trim()}
+                className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
+              >
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  'Send'
+                )}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              Press Enter to send • Shift+Enter for new line
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-6 text-gray-500 text-sm">
+          Powered by Next.js & AI
+        </div>
+
+        {/* XML Memory Display */}
+        {memory && (
+          <div className="mt-6 bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="bg-gray-800 text-white px-6 py-3">
+              <h3 className="text-lg font-semibold flex items-center">
+                <span className="mr-2">🧠</span>
+                Agent Memory (XML)
+              </h3>
+            </div>
+            <div className="p-6">
+              <pre className="bg-gray-50 rounded-lg p-4 overflow-x-auto text-sm text-gray-800 border">
+                <code>{formatXML(memory)}</code>
+              </pre>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
