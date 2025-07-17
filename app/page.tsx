@@ -61,7 +61,7 @@ export default function Home() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">AI Agent Chat</h1>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">Simple AF Agent</h1>
           <p className="text-gray-600">Interact with your intelligent assistant</p>
         </div>
 
