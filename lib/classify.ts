@@ -17,7 +17,7 @@ type ClassificationResult = GetWeather | NoTool;
 
 export async function classifyIntent(input: string): Promise<ClassificationResult> {
   const response = await openai.chat.completions.create({
-    model: "gpt-4",
+    model: "gpt-4.1-mini",
     messages: [
       {
         role: "system",
