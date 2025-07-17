@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     // Tool execution loop
     let currentInput = input;
-    let maxIterations = 5; // Prevent infinite loops
+    const maxIterations = 5; // Prevent infinite loops
     let iteration = 0;
 
     while (iteration < maxIterations) {
