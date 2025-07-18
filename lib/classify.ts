@@ -8,12 +8,17 @@ interface GetWeather {
   args: { location: string };
 }
 
+interface GetStockInfo {
+  intent: "get_stock_info";
+  args: { ticker: string };
+}
+
 interface NoTool {
   intent: "none";
   args: Record<string, never>;
 }
 
-type ClassificationResult = GetWeather | NoTool;
+type ClassificationResult = GetWeather | GetStockInfo | NoTool;
 
 export async function classifyIntent(input: string): Promise<ClassificationResult> {
   const response = await openai.chat.completions.create({
@@ -24,6 +29,7 @@ export async function classifyIntent(input: string): Promise<ClassificationResul
         content: `
 You are a JSON tool classifier. 
 If the input is a request to get the weather for a location, return only a JSON object in this format: { "intent": "get_weather", "args": { "location": "<city>" } }
+If the input is a request to get stock information for a ticker symbol, return only a JSON object in this format: { "intent": "get_stock_info", "args": { "ticker": "<ticker>" } }
 If the input is not a tool request, return only a JSON object in this format: { "intent": "none", "args": {} }
 Do not include any other text or explanation.
         `.trim(),
