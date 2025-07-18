@@ -195,8 +195,8 @@ export default function Home() {
               <option value={ChatModels.ANTHROPIC_CLAUDE_4_SONNET}>Claude 4 Sonnet</option>
               <option value={ChatModels.ANTHROPIC_CLAUDE_4_OPUS}>Claude 4 Opus</option>
               <option value={ChatModels.GOOGLE_GEMINI_2_5_FLASH}>Gemini 2.5 Flash</option>
-              <option value={ChatModels.GROQ_DEEPSEEK_R1_DISTILL_LLAMA_70B}>DeepSeek R1 Distill Llama 70B</option>
-              <option value={ChatModels.GROQ_LLAMA_3_2_90B_VISION}>Llama 3.2 90B Vision</option>
+              {/* <option value={ChatModels.GROQ_DEEPSEEK_R1_DISTILL_LLAMA_70B}>DeepSeek R1 Distill Llama 70B</option>
+              <option value={ChatModels.GROQ_LLAMA_3_2_90B_VISION}>Llama 3.2 90B Vision</option> */}
               <option value={ChatModels.GROQ_LLAMA_3_3_70B_VERSATILE}>Llama 3.3 70B Versatile</option>
               {/* <option value={ChatModels.OLLAMA_LLAMA_3_2_VISION}>Llama 3.2 Vision</option>
               <option value={ChatModels.OLLAMA_DEEPSEEK_R1_8B}>DeepSeek R1 8B</option>
