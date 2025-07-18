@@ -151,7 +151,7 @@ while (reader) {
 
 ### Integration Points
 
-- **Components**: `ChatInput` component handles streaming consumption
+- **Main Page**: `app/page.tsx` handles streaming consumption and user interface
 - **Library**: Uses `classify.ts` for intent recognition and `tools.ts` for execution
 - **Memory**: Integrates with `memory.ts` for conversation tracking
 

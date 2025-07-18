@@ -25,12 +25,11 @@ An AI-powered chat application built with Next.js 15 that provides intelligent c
 
 ## 🏗️ Architecture
 
-The application uses a modular component architecture:
+The application uses a single-page architecture with all UI components integrated into the main page:
 
-- **ChatMessages**: Handles message display, loading states, and XML context
-- **ChatInput**: Manages input, submission, streaming, and focus behavior
-- **SystemMessageEditor**: Configurable AI system prompts with localStorage persistence
+- **Single Page Component**: All chat interface, input handling, and system message editing in `app/page.tsx`
 - **API Routes**: Streaming responses and tool execution via `/api/agent`
+- **Library Functions**: AI classification, tool execution, and memory management in `/lib`
 
 ## 🚦 Getting Started
 
@@ -106,22 +105,21 @@ To add a new tool:
 - **Styling**: Modify Tailwind classes in components
 - **System Messages**: Use the settings panel or edit localStorage
 - **AI Behavior**: Update prompts in `lib/classify.ts`
-- **UI Components**: Customize components in the `/components` directory
+- **UI Components**: Customize the main page component in `app/page.tsx`
 
 ## 📦 Project Structure
 
 ```
 ├── app/                    # Next.js App Router
 │   ├── api/agent/         # AI agent API route
-│   └── page.tsx           # Main application page
-├── components/            # Modular React components
-│   ├── ChatMessages.tsx   # Message display component
-│   ├── ChatInput.tsx      # Input and submission handling
-│   └── SystemMessageEditor.tsx # System message configuration
+│   └── page.tsx           # Main application page (single-file architecture)
+├── components/ui/         # shadcn/ui components
+│   └── button.tsx         # Button component
 ├── lib/                   # Utility functions and AI logic
 │   ├── classify.ts        # AI intent classification
 │   ├── tools.ts           # Tool definitions
-│   └── memory.ts          # Conversation memory management
+│   ├── memory.ts          # Conversation memory management
+│   └── utils.ts           # Utility functions
 └── public/               # Static assets
 ```
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is a **Simple AF Agent** - an AI-powered chat application built with Next.js 15 that provides intelligent conversation capabilities with tool integration for weather and stock information. The application features real-time streaming responses, modular component architecture, and a clean, responsive user interface.
+This is a **Simple AF Agent** - an AI-powered chat application built with Next.js 15 that provides intelligent conversation capabilities with tool integration for weather and stock information. The application features real-time streaming responses, single-page architecture, and a clean, responsive user interface.
 
 ## Development Commands
 
@@ -15,7 +15,7 @@ This is a **Simple AF Agent** - an AI-powered chat application built with Next.j
 
 ## Architecture & Structure
 
-This is a Next.js 15 application using the App Router architecture with AI agent capabilities and modular component design.
+This is a Next.js 15 application using the App Router architecture with AI agent capabilities and single-page design.
 
 ### Framework & Dependencies
 - **Next.js 15** with App Router (`app/` directory structure)
@@ -28,7 +28,6 @@ This is a Next.js 15 application using the App Router architecture with AI agent
 
 ### Key Directories
 - `app/` - Next.js App Router pages, layouts, and API routes
-- `components/` - Modular React components (ChatMessages, ChatInput, SystemMessageEditor)
 - `components/ui/` - Reusable shadcn/ui components
 - `lib/` - Utility functions, AI classification, tools, and memory management
 - `public/` - Static assets
@@ -41,11 +40,9 @@ This is a Next.js 15 application using the App Router architecture with AI agent
 - **System Message Configuration**: Customizable AI behavior and personality
 
 ### Component Architecture
-The application uses a modular component system with:
-- **ChatMessages**: Handles message display, loading states, and XML context window
-- **ChatInput**: Manages input, submission, streaming, and focus behavior
-- **SystemMessageEditor**: Configurable AI system prompts with localStorage persistence
-- **Main Page**: Orchestrates components and manages application state
+The application uses a single-page component architecture with:
+- **Main Page** (`app/page.tsx`): Contains all chat interface, input handling, system message editing, and state management
+- **Inline Components**: Chat messages, input area, system message editor, and XML context window are all integrated into the main page component
 
 ### Styling Approach
 - **Tailwind CSS v4** as the primary styling solution
@@ -55,10 +52,10 @@ The application uses a modular component system with:
 - **Responsive layout** optimized for desktop and mobile
 
 ### Development Patterns
-- **Modular Components**: Separation of concerns with reusable components
-- **TypeScript Interfaces**: Proper typing for component props and API responses
-- **React Hooks**: State management and side effects
-- **forwardRef**: For scroll management and DOM access
+- **Single-Page Architecture**: All UI components integrated into one main page component
+- **TypeScript Interfaces**: Proper typing for API responses and data structures
+- **React Hooks**: State management and side effects with useState and useEffect
+- **useRef**: For scroll management and DOM access
 - **Error Boundaries**: Graceful error handling for streaming and API failures
 - **Focus Management**: Automatic input focus for seamless UX
 
@@ -78,9 +75,9 @@ The application uses a modular component system with:
 
 When working with this codebase:
 
-1. **Component Structure**: The app uses a modular component architecture. Main components are in `/components/` and should be updated when adding new features.
+1. **Component Structure**: The app uses a single-page architecture with all UI components integrated into `app/page.tsx`. New features should be added to this main component.
 
-2. **State Management**: Application state is managed through React hooks in the main page component. Consider the flow between components when making changes.
+2. **State Management**: Application state is managed through React hooks (useState, useEffect) in the main page component. All state logic is contained within this single component.
 
 3. **API Integration**: The `/api/agent` route handles streaming responses and tool execution. Changes to AI behavior should be made in `lib/classify.ts` and tool definitions in `lib/tools.ts`.
 
