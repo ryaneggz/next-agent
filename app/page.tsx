@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function Home() {
   const [input, setInput] = useState('');
@@ -9,6 +9,7 @@ export default function Home() {
   const [memory, setMemory] = useState<string>('');
   const [systemMessage, setSystemMessage] = useState('You are a helpful AI assistant.');
   const [isSystemEditorOpen, setIsSystemEditorOpen] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Load system message from localStorage on component mount
   useEffect(() => {
@@ -23,6 +24,24 @@ export default function Home() {
     localStorage.setItem('systemMessage', systemMessage);
   }, [systemMessage]);
 
+  // Scroll functions
+  const scrollToShowLatestMessage = () => {
+    if (chatContainerRef.current) {
+      // Scroll to show the latest user message at the top
+      const container = chatContainerRef.current;
+      const lastChild = container.lastElementChild?.lastElementChild;
+      if (lastChild) {
+        lastChild.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
+
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!input.trim()) return;
     
@@ -30,6 +49,11 @@ export default function Home() {
     const userMessage = input;
     setLog(prev => [...prev, `You: ${userMessage}`]);
     setInput('');
+
+    // Scroll to show the latest user message at the top
+    setTimeout(() => {
+      scrollToShowLatestMessage();
+    }, 100);
 
     try {
       const res = await fetch('/api/agent', {
@@ -69,6 +93,10 @@ export default function Home() {
                     newLog[streamingIndex] = `Agent: ${streamingResponse}`;
                     return newLog;
                   });
+                  // Auto-scroll to bottom during streaming
+                  setTimeout(() => {
+                    scrollToBottom();
+                  }, 50);
                 } else if (data.type === 'complete') {
                   setMemory(data.memory);
                 } else if (data.type === 'error') {
@@ -169,7 +197,7 @@ export default function Home() {
         {/* Chat Container */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Chat Messages */}
-          <div className="h-96 overflow-y-auto p-6 bg-gray-50">
+          <div ref={chatContainerRef} className="h-96 overflow-y-auto p-6 bg-gray-50">
             {log.length === 0 ? (
               <div className="text-center text-gray-500 mt-20">
                 <div className="text-6xl mb-4">🤖</div>
