@@ -1,12 +1,27 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [input, setInput] = useState('');
   const [log, setLog] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [memory, setMemory] = useState<string>('');
+  const [systemMessage, setSystemMessage] = useState('You are a helpful AI assistant.');
+  const [isSystemEditorOpen, setIsSystemEditorOpen] = useState(false);
+
+  // Load system message from localStorage on component mount
+  useEffect(() => {
+    const savedSystemMessage = localStorage.getItem('systemMessage');
+    if (savedSystemMessage) {
+      setSystemMessage(savedSystemMessage);
+    }
+  }, []);
+
+  // Save system message to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('systemMessage', systemMessage);
+  }, [systemMessage]);
 
   const handleSubmit = async () => {
     if (!input.trim()) return;
@@ -20,7 +35,7 @@ export default function Home() {
       const res = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: userMessage }),
+        body: JSON.stringify({ input: userMessage, systemMessage }),
       });
       const data = await res.json();
       setLog(prev => [...prev, `Agent: ${data.response}`]);
@@ -60,10 +75,49 @@ export default function Home() {
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">AI Agent Chat</h1>
+        <div className="relative text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">Simple AF Agent</h1>
           <p className="text-gray-600">Interact with your intelligent assistant</p>
+          
+          {/* System Message Editor Icon */}
+          <button
+            onClick={() => setIsSystemEditorOpen(!isSystemEditorOpen)}
+            className="absolute top-0 right-0 p-2 text-gray-500 hover:text-gray-700 transition-colors"
+            title="Edit system message"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
         </div>
+
+        {/* System Message Editor */}
+        {isSystemEditorOpen && (
+          <div className="mb-6 bg-white rounded-2xl shadow-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">System Message</h3>
+              <button
+                onClick={() => setIsSystemEditorOpen(false)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <textarea
+              value={systemMessage}
+              onChange={(e) => setSystemMessage(e.target.value)}
+              placeholder="Enter your system message here..."
+              className="w-full h-24 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+              rows={3}
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              This message will be sent to the AI as context for how it should behave.
+            </p>
+          </div>
+        )}
 
         {/* Chat Container */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
