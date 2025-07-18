@@ -220,7 +220,7 @@ export default function Home() {
             <div className="bg-gray-800 text-white px-6 py-3">
               <h3 className="text-lg font-semibold flex items-center">
                 <span className="mr-2">🧠</span>
-                Agent Memory (XML)
+                Context Window (XML) | Factor 03
               </h3>
             </div>
             <div className="p-6">

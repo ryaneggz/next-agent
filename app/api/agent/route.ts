@@ -17,17 +17,16 @@ export async function POST(req: NextRequest) {
     // Add user input as an event
     threadXML = await addEvent(threadXML, 'user_input', input);
 
-    // Tool execution loop
-    let currentInput = input;
-    const maxIterations = 5; // Prevent infinite loops
-    let iteration = 0;
-
-    while (iteration < maxIterations) {
-      const { intent, args } = await classifyIntent(currentInput);
+    // Tool execution - classify all tools from the input at once
+    const toolIntents = await classifyIntent(input);
+    
+    // Execute all identified tools
+    for (const toolIntent of toolIntents) {
+      const { intent, args } = toolIntent;
       
       if (intent === 'none') {
-        // No more tools to execute, break the loop
-        break;
+        // No tools to execute, continue to LLM response
+        continue;
       }
       
       if (intent in tools) {
@@ -44,16 +43,7 @@ export async function POST(req: NextRequest) {
         
         // Add tool execution as an event
         threadXML = await addEvent(threadXML, intent, toolOutput);
-        
-        // After executing a tool, ask if any additional tools are needed
-        // instead of re-classifying the original input
-        currentInput = "Are there any additional tools needed based on the current conversation?";
-      } else {
-        // Unknown tool, break the loop
-        break;
       }
-      
-      iteration++;
     }
 
     // Final LLM response after all tools have been executed
