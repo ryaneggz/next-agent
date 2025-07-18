@@ -82,6 +82,35 @@ export async function getLLMResponse(threadXML: string, systemMessage?: string):
   return response.choices[0]?.message?.content ?? "I'm sorry, I couldn't generate a response.";
 }
 
+// Function for streaming LLM responses using event-based memory
+export async function getLLMResponseStream(threadXML: string, systemMessage?: string) {
+  
+  // Convert events to conversation format for LLM
+  const messages: { role: "user" | "assistant"|"system", content: string }[] = [
+    {
+      role: "system",
+      content: systemMessage || "You are a helpful AI assistant. Respond naturally and conversationally based on the conversation history."
+    },
+	{
+		role: "user",
+		content: threadXML
+	}
+  ];
+  
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4.1-mini",
+    messages: messages.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    })),
+    temperature: 0.7,
+    stream: true,
+  });
+
+  return response;
+}
+
 // Function to get the latest context for tool classification
 export function getLatestContext(threadXML: string): string {
   const events = parseEvents(threadXML);

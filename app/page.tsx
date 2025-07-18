@@ -35,16 +35,63 @@ export default function Home() {
       const res = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: userMessage, systemMessage }),
+        body: JSON.stringify({ input: userMessage, systemMessage, stream: true }),
       });
-      const data = await res.json();
-      setLog(prev => [...prev, `Agent: ${data.response}`]);
-      
-      // Update memory state with the XML response
-      if (data.memory) {
-        setMemory(data.memory);
+
+      if (res.headers.get('content-type')?.includes('text/event-stream')) {
+        // Handle streaming response
+        const reader = res.body?.getReader();
+        const decoder = new TextDecoder();
+        let streamingResponse = '';
+        
+        // Add initial streaming message
+        const streamingIndex = log.length + 1;
+        setLog(prev => [...prev, `Agent: `]);
+        
+        while (reader) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                if (data.type === 'memory') {
+                  setMemory(data.memory);
+                } else if (data.type === 'content') {
+                  streamingResponse += data.content;
+                  setLog(prev => {
+                    const newLog = [...prev];
+                    newLog[streamingIndex] = `Agent: ${streamingResponse}`;
+                    return newLog;
+                  });
+                } else if (data.type === 'complete') {
+                  setMemory(data.memory);
+                } else if (data.type === 'error') {
+                  setLog(prev => [...prev.slice(0, -1), `Error: ${data.error}`]);
+                }
+              } catch (e) {
+                console.error('Error parsing SSE data:', e);
+              }
+            }
+          }
+        }
+      } else {
+        // Handle regular JSON response (fallback)
+        const data = await res.json();
+        setLog(prev => [...prev, `Agent: ${data.response}`]);
+        
+        // Update memory state with the XML response
+        if (data.memory) {
+          setMemory(data.memory);
+        }
       }
-    } catch {
+    } catch (error) {
+      console.error('Request error:', error);
       setLog(prev => [...prev, `Error: Failed to get response`]);
     } finally {
       setIsLoading(false);
@@ -186,7 +233,7 @@ export default function Home() {
                 type="text"
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyPress}
                 placeholder="Type your message..."
                 disabled={isLoading}
                 className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
