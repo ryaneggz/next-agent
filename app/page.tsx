@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function Home() {
   const [input, setInput] = useState('');
@@ -9,6 +9,7 @@ export default function Home() {
   const [memory, setMemory] = useState<string>('');
   const [systemMessage, setSystemMessage] = useState('You are a helpful AI assistant.');
   const [isSystemEditorOpen, setIsSystemEditorOpen] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Load system message from localStorage on component mount
   useEffect(() => {
@@ -23,6 +24,24 @@ export default function Home() {
     localStorage.setItem('systemMessage', systemMessage);
   }, [systemMessage]);
 
+  // Scroll functions
+  const scrollToShowLatestMessage = () => {
+    if (chatContainerRef.current) {
+      // Scroll to show the latest user message at the top
+      const container = chatContainerRef.current;
+      const lastChild = container.lastElementChild?.lastElementChild;
+      if (lastChild) {
+        lastChild.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
+
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!input.trim()) return;
     
@@ -31,20 +50,76 @@ export default function Home() {
     setLog(prev => [...prev, `You: ${userMessage}`]);
     setInput('');
 
+    // Scroll to show the latest user message at the top
+    setTimeout(() => {
+      scrollToShowLatestMessage();
+    }, 100);
+
     try {
       const res = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: userMessage, systemMessage }),
+        body: JSON.stringify({ input: userMessage, systemMessage, stream: true }),
       });
-      const data = await res.json();
-      setLog(prev => [...prev, `Agent: ${data.response}`]);
-      
-      // Update memory state with the XML response
-      if (data.memory) {
-        setMemory(data.memory);
+
+      if (res.headers.get('content-type')?.includes('text/event-stream')) {
+        // Handle streaming response
+        const reader = res.body?.getReader();
+        const decoder = new TextDecoder();
+        let streamingResponse = '';
+        
+        // Add initial streaming message
+        const streamingIndex = log.length + 1;
+        setLog(prev => [...prev, `Agent: `]);
+        
+        while (reader) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                if (data.type === 'memory') {
+                  setMemory(data.memory);
+                } else if (data.type === 'content') {
+                  streamingResponse += data.content;
+                  setLog(prev => {
+                    const newLog = [...prev];
+                    newLog[streamingIndex] = `Agent: ${streamingResponse}`;
+                    return newLog;
+                  });
+                  // Auto-scroll to bottom during streaming
+                  setTimeout(() => {
+                    scrollToBottom();
+                  }, 50);
+                } else if (data.type === 'complete') {
+                  setMemory(data.memory);
+                } else if (data.type === 'error') {
+                  setLog(prev => [...prev.slice(0, -1), `Error: ${data.error}`]);
+                }
+              } catch (e) {
+                console.error('Error parsing SSE data:', e);
+              }
+            }
+          }
+        }
+      } else {
+        // Handle regular JSON response (fallback)
+        const data = await res.json();
+        setLog(prev => [...prev, `Agent: ${data.response}`]);
+        
+        // Update memory state with the XML response
+        if (data.memory) {
+          setMemory(data.memory);
+        }
       }
-    } catch {
+    } catch (error) {
+      console.error('Request error:', error);
       setLog(prev => [...prev, `Error: Failed to get response`]);
     } finally {
       setIsLoading(false);
@@ -122,7 +197,7 @@ export default function Home() {
         {/* Chat Container */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Chat Messages */}
-          <div className="h-96 overflow-y-auto p-6 bg-gray-50">
+          <div ref={chatContainerRef} className="h-96 overflow-y-auto p-6 bg-gray-50">
             {log.length === 0 ? (
               <div className="text-center text-gray-500 mt-20">
                 <div className="text-6xl mb-4">🤖</div>
@@ -186,7 +261,7 @@ export default function Home() {
                 type="text"
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyPress}
                 placeholder="Type your message..."
                 disabled={isLoading}
                 className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -220,7 +295,7 @@ export default function Home() {
             <div className="bg-gray-800 text-white px-6 py-3">
               <h3 className="text-lg font-semibold flex items-center">
                 <span className="mr-2">🧠</span>
-                Agent Memory (XML)
+                Context Window (XML) | Factor 03
               </h3>
             </div>
             <div className="p-6">

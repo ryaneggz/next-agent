@@ -18,20 +18,29 @@ interface NoTool {
   args: Record<string, never>;
 }
 
-type ClassificationResult = GetWeather | GetStockInfo | NoTool;
+type ToolIntent = GetWeather | GetStockInfo | NoTool;
 
-export async function classifyIntent(input: string): Promise<ClassificationResult> {
+export async function classifyIntent(input: string): Promise<ToolIntent[]> {
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
     messages: [
       {
         role: "system",
         content: `
-You are a JSON tool classifier. 
-If the input is a request to get the weather for a location, return only a JSON object in this format: { "intent": "get_weather", "args": { "location": "<city>" } }
-If the input is a request to get stock information for a ticker symbol, return only a JSON object in this format: { "intent": "get_stock_info", "args": { "ticker": "<ticker>" } }
-If the input is not a tool request, return only a JSON object in this format: { "intent": "none", "args": {} }
-Do not include any other text or explanation.
+You are a JSON tool classifier that can identify multiple tool requests in a single input.
+Analyze the input and identify ALL tool requests present. Return a JSON array of tool objects.
+
+For weather requests, use this format: { "intent": "get_weather", "args": { "location": "<city>" } }
+For stock information requests, use this format: { "intent": "get_stock_info", "args": { "ticker": "<ticker>" } }
+If no tools are needed, return: [{ "intent": "none", "args": {} }]
+
+Examples:
+- "weather in dallas" → [{ "intent": "get_weather", "args": { "location": "dallas" } }]
+- "price of tsla" → [{ "intent": "get_stock_info", "args": { "ticker": "tsla" } }]
+- "weather in dallas, price of tsla" → [{ "intent": "get_weather", "args": { "location": "dallas" } }, { "intent": "get_stock_info", "args": { "ticker": "tsla" } }]
+- "how are you today?" → [{ "intent": "none", "args": {} }]
+
+Return only the JSON array, no other text.
         `.trim(),
       },
       {
@@ -41,7 +50,7 @@ Do not include any other text or explanation.
     ],
   });
 
-  const content = response.choices[0]?.message?.content ?? "{}";
+  const content = response.choices[0]?.message?.content ?? "[]";
   return JSON.parse(content);
 }
 
@@ -71,6 +80,35 @@ export async function getLLMResponse(threadXML: string, systemMessage?: string):
   });
 
   return response.choices[0]?.message?.content ?? "I'm sorry, I couldn't generate a response.";
+}
+
+// Function for streaming LLM responses using event-based memory
+export async function getLLMResponseStream(threadXML: string, systemMessage?: string) {
+  
+  // Convert events to conversation format for LLM
+  const messages: { role: "user" | "assistant"|"system", content: string }[] = [
+    {
+      role: "system",
+      content: systemMessage || "You are a helpful AI assistant. Respond naturally and conversationally based on the conversation history."
+    },
+	{
+		role: "user",
+		content: threadXML
+	}
+  ];
+  
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4.1-mini",
+    messages: messages.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    })),
+    temperature: 0.7,
+    stream: true,
+  });
+
+  return response;
 }
 
 // Function to get the latest context for tool classification
