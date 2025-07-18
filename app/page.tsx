@@ -156,7 +156,7 @@ export default function Home() {
                             </span>
                           </div>
                         )}
-                        <p className="text-sm leading-relaxed">{content}</p>
+                        <div className="text-sm leading-relaxed whitespace-pre-wrap">{content}</div>
                       </div>
                     </div>
                   );
