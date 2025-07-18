@@ -8,7 +8,7 @@ let threadXML = ""; // Simple in-memory store. Replace with DB or file store as 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { input, systemMessage, stream } = body;
+    const { input, systemMessage, model, stream } = body;
 
     if (!input) {
       return NextResponse.json({ error: "Missing input" }, { status: 400 });
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     threadXML = await addEvent(threadXML, 'user_input', input);
 
     // Tool execution - classify all tools from the input at once
-    const toolIntents = await classifyIntent(input);
+    const toolIntents = await classifyIntent(input, model);
     
     // Execute all identified tools
     for (const toolIntent of toolIntents) {
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     // Check if streaming is requested
     if (stream) {
       // Return streaming response
-      const llmStream = await getLLMResponseStream(threadXML + "\n\n Response:", systemMessage);
+      const llmStream = await getLLMResponseStream(threadXML + "\n\n Response:", systemMessage, model);
       
       let fullResponse = '';
       
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
             
             // Process streaming response
             for await (const chunk of llmStream) {
-              const content = chunk.choices[0]?.delta?.content || '';
+              const content = chunk.content || '';
               if (content) {
                 fullResponse += content;
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
       });
     } else {
       // Non-streaming response (fallback)
-      const llmResponse = await getLLMResponse(threadXML + "\n\n Response:", systemMessage);
+      const llmResponse = await getLLMResponse(threadXML + "\n\n Response:", systemMessage, model);
       threadXML = await addEvent(threadXML, 'llm_response', llmResponse);
 
       return NextResponse.json({ 
