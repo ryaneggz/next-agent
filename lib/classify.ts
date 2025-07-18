@@ -1,7 +1,21 @@
-import { OpenAI } from "openai";
+import { initChatModel } from "langchain/chat_models/universal";
 import { parseEvents } from './memory';
+import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import ChatModels from "./types/llm";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let model: BaseChatModel | null = null;
+
+async function getModel(modelName?: string) {
+  const selectedModel = modelName || ChatModels.OPENAI_GPT_4_1_MINI;
+  
+  // Always create a new model instance if a specific model is requested
+  if (modelName || !model) {
+    model = await initChatModel(selectedModel, {
+      // temperature: 0.7,
+    });
+  }
+  return model;
+}
 
 interface GetWeather {
   intent: "get_weather";
@@ -25,13 +39,12 @@ interface NoTool {
 
 type ToolIntent = GetWeather | GetStockInfo | Multiply | NoTool;
 
-export async function classifyIntent(input: string): Promise<ToolIntent[]> {
-  const response = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    messages: [
-      {
-        role: "system",
-        content: `
+export async function classifyIntent(input: string, modelName?: string): Promise<ToolIntent[]> {
+  const model = await getModel(modelName);
+  const response = await model.invoke([
+    {
+      role: "system",
+      content: `
 You are a JSON tool classifier that can identify multiple tool requests in a single input.
 Analyze the input and identify ALL tool requests present. Return a JSON array of tool objects.
 
@@ -49,20 +62,19 @@ Examples:
 
 Return only the JSON array, no other text.
         `.trim(),
-      },
-      {
-        role: "user",
-        content: input,
-      },
-    ],
-  });
+    },
+    {
+      role: "user",
+      content: input,
+    },
+  ]);
 
-  const content = response.choices[0]?.message?.content ?? "[]";
+  const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content) ?? "[]";
   return JSON.parse(content);
 }
 
 // Function for vanilla LLM responses using event-based memory
-export async function getLLMResponse(threadXML: string, systemMessage?: string): Promise<string> {
+export async function getLLMResponse(threadXML: string, systemMessage?: string, modelName?: string): Promise<string> {
   
   // Convert events to conversation format for LLM
   const messages: { role: "user" | "assistant"|"system", content: string }[] = [
@@ -75,22 +87,15 @@ export async function getLLMResponse(threadXML: string, systemMessage?: string):
 			content: threadXML
 		}
   ];
-  
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    messages: messages.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    })),
-    temperature: 0.7,
-  });
+  const model = await getModel(modelName);
+  const response = await model.invoke(messages);
 
-  return response.choices[0]?.message?.content ?? "I'm sorry, I couldn't generate a response.";
+  return typeof response.content === 'string' ? response.content : JSON.stringify(response.content) ?? "I'm sorry, I couldn't generate a response.";
 }
 
 // Function for streaming LLM responses using event-based memory
-export async function getLLMResponseStream(threadXML: string, systemMessage?: string) {
+export async function getLLMResponseStream(threadXML: string, systemMessage?: string, modelName?: string) {
   
   // Convert events to conversation format for LLM
   const messages: { role: "user" | "assistant"|"system", content: string }[] = [
@@ -103,17 +108,9 @@ export async function getLLMResponseStream(threadXML: string, systemMessage?: st
 		content: threadXML
 	}
   ];
-  
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    messages: messages.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    })),
-    temperature: 0.7,
-    stream: true,
-  });
+  const model = await getModel(modelName);
+  const response = model.stream(messages);
 
   return response;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import ChatModels from '@/lib/types/llm';
 
 export default function Home() {
   const [input, setInput] = useState('');
@@ -9,14 +10,20 @@ export default function Home() {
   const [memory, setMemory] = useState<string>('');
   const [systemMessage, setSystemMessage] = useState('You are a helpful AI assistant.');
   const [isSystemEditorOpen, setIsSystemEditorOpen] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini');
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load system message from localStorage on component mount
+  // Load system message and selected model from localStorage on component mount
   useEffect(() => {
     const savedSystemMessage = localStorage.getItem('systemMessage');
     if (savedSystemMessage) {
       setSystemMessage(savedSystemMessage);
+    }
+    
+    const savedModel = localStorage.getItem('selectedModel');
+    if (savedModel) {
+      setSelectedModel(savedModel);
     }
   }, []);
 
@@ -24,6 +31,11 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem('systemMessage', systemMessage);
   }, [systemMessage]);
+
+  // Save selected model to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('selectedModel', selectedModel);
+  }, [selectedModel]);
 
   // Focus input on page load
   useEffect(() => {
@@ -74,7 +86,7 @@ export default function Home() {
       const res = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: userMessage, systemMessage, stream: true }),
+        body: JSON.stringify({ input: userMessage, systemMessage, model: selectedModel, stream: true }),
       });
 
       if (res.headers.get('content-type')?.includes('text/event-stream')) {
@@ -167,7 +179,35 @@ export default function Home() {
         {/* Header */}
         <div className="relative text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Simple AF Agent</h1>
-          <p className="text-gray-600">Interact with your intelligent assistant</p>
+          <p className="text-gray-600 mb-4">Interact with your intelligent assistant</p>
+          
+          {/* Model Selector */}
+          <div className="flex justify-center items-center gap-2 mb-2">
+            <label htmlFor="model-select" className="text-sm font-medium text-gray-700">
+              Model:
+            </label>
+            <select
+              id="model-select"
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-sm"
+            >
+              <option value={ChatModels.ANTHROPIC_CLAUDE_4_SONNET}>Claude 4 Sonnet</option>
+              <option value={ChatModels.ANTHROPIC_CLAUDE_4_OPUS}>Claude 4 Opus</option>
+              <option value={ChatModels.GOOGLE_GEMINI_2_5_FLASH}>Gemini 2.5 Flash</option>
+              <option value={ChatModels.GROQ_DEEPSEEK_R1_DISTILL_LLAMA_70B}>DeepSeek R1 Distill Llama 70B</option>
+              <option value={ChatModels.GROQ_LLAMA_3_2_90B_VISION}>Llama 3.2 90B Vision</option>
+              <option value={ChatModels.GROQ_LLAMA_3_3_70B_VERSATILE}>Llama 3.3 70B Versatile</option>
+              {/* <option value={ChatModels.OLLAMA_LLAMA_3_2_VISION}>Llama 3.2 Vision</option>
+              <option value={ChatModels.OLLAMA_DEEPSEEK_R1_8B}>DeepSeek R1 8B</option>
+              <option value={ChatModels.OLLAMA_DEEPSEEK_R1_14B}>DeepSeek R1 14B</option> */}
+              <option value={ChatModels.OPENAI_GPT_4_1_MINI}>GPT-4.1 Mini</option>
+              <option value={ChatModels.OPENAI_GPT_4O}>GPT-4o</option>
+              <option value={ChatModels.OPENAI_O3}>o3</option>
+              <option value={ChatModels.OPENAI_O4_MINI}>o4 Mini</option>
+              
+            </select>
+          </div>
           
           {/* System Message Editor Icon */}
           <button
