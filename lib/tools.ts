@@ -1,9 +1,30 @@
 import yahooFinance from 'yahoo-finance2';
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+const multiply = tool(
+  ({ a, b }: { a: number; b: number }): number => {
+    /**
+     * Multiply two numbers.
+     */
+    return a * b;
+  },
+  {
+    name: "multiply",
+    description: "Multiply two numbers",
+    schema: z.object({
+      a: z.number(),
+      b: z.number(),
+    }),
+  }
+);
 
 export const tools = {
   get_weather: ({ location }: { location: string }) => {
     return `The weather in ${location} is sunny and 88°F.`; // Stubbed
   },
+  
+  multiply,
   
   get_stock_info: async ({ ticker }: { ticker: string }) => {
     try {
