@@ -37,6 +37,9 @@ export async function POST(req: NextRequest) {
           toolOutput = tools.get_weather(args as { location: string });
         } else if (intent === 'get_stock_info' && 'ticker' in args) {
           toolOutput = await tools.get_stock_info(args as { ticker: string });
+        } else if (intent === 'multiply' && 'a' in args && 'b' in args) {
+          const result = await tools.multiply.invoke(args as { a: number; b: number });
+          toolOutput = `${args.a} × ${args.b} = ${result}`;
         } else {
           toolOutput = `Invalid arguments for tool: ${intent}`;
         }

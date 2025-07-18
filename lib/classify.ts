@@ -27,12 +27,17 @@ interface GetStockInfo {
   args: { ticker: string };
 }
 
+interface Multiply {
+  intent: "multiply";
+  args: { a: number; b: number };
+}
+
 interface NoTool {
   intent: "none";
   args: Record<string, never>;
 }
 
-type ToolIntent = GetWeather | GetStockInfo | NoTool;
+type ToolIntent = GetWeather | GetStockInfo | Multiply | NoTool;
 
 export async function classifyIntent(input: string, modelName?: string): Promise<ToolIntent[]> {
   const model = await getModel(modelName);
@@ -45,11 +50,13 @@ Analyze the input and identify ALL tool requests present. Return a JSON array of
 
 For weather requests, use this format: { "intent": "get_weather", "args": { "location": "<city>" } }
 For stock information requests, use this format: { "intent": "get_stock_info", "args": { "ticker": "<ticker>" } }
+For multiplication requests, use this format: { "intent": "multiply", "args": { "a": <number>, "b": <number> } }
 If no tools are needed, return: [{ "intent": "none", "args": {} }]
 
 Examples:
 - "weather in dallas" → [{ "intent": "get_weather", "args": { "location": "dallas" } }]
 - "price of tsla" → [{ "intent": "get_stock_info", "args": { "ticker": "tsla" } }]
+- "multiply 5 and 3" → [{ "intent": "multiply", "args": { "a": 5, "b": 3 } }]
 - "weather in dallas, price of tsla" → [{ "intent": "get_weather", "args": { "location": "dallas" } }, { "intent": "get_stock_info", "args": { "ticker": "tsla" } }]
 - "how are you today?" → [{ "intent": "none", "args": {} }]
 
