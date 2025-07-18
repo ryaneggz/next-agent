@@ -10,6 +10,7 @@ export default function Home() {
   const [systemMessage, setSystemMessage] = useState('You are a helpful AI assistant.');
   const [isSystemEditorOpen, setIsSystemEditorOpen] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Load system message from localStorage on component mount
   useEffect(() => {
@@ -23,6 +24,20 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem('systemMessage', systemMessage);
   }, [systemMessage]);
+
+  // Focus input on page load
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
+  // Focus input after AI response completes
+  useEffect(() => {
+    if (!isLoading && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isLoading]);
 
   // Scroll functions
   const scrollToShowLatestMessage = () => {
@@ -258,6 +273,7 @@ export default function Home() {
           <div className="p-4 bg-white border-t border-gray-200">
             <div className="flex space-x-2">
               <input
+                ref={inputRef}
                 type="text"
                 value={input}
                 onChange={e => setInput(e.target.value)}
