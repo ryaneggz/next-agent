@@ -14,7 +14,7 @@ function CodeViewer() {
 				</h3>
 			</div>
 			<div className="p-6">
-				<pre className="bg-gray-50 rounded-lg p-4 overflow-x-auto text-sm text-gray-800 border">
+				<pre className="bg-gray-50 rounded-lg p-4 overflow-x-auto text-sm text-gray-800 border max-h-[250px] overflow-y-auto">
 					<code>{formatXML(memory)}</code>
 				</pre>
 			</div>

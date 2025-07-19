@@ -3,6 +3,7 @@ import { addEvent, parseEvents } from './memory';
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import ChatModels from "./types/llm";
 import { tools } from "./tools";
+import YAML from 'yaml'
 
 let model: BaseChatModel | null = null;
 
@@ -159,7 +160,7 @@ export async function handleToolCall(input: string, model: string, threadXML: st
           toolOutput = `${args.a} × ${args.b} = ${result}`;
         } else if (intent === 'web_search' && 'query' in args) {
           const result = await tools.web_search.invoke(args as { query: string });
-          toolOutput = `Search results for "${args.query}":\n${JSON.stringify(result)}`;
+          toolOutput = `Search results for "${args.query}":\n${YAML.stringify(result, { indent: 2})}`;
         } else {
           toolOutput = `Invalid arguments for tool: ${intent}`;
         }
