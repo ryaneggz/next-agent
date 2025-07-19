@@ -1,5 +1,5 @@
 import { initChatModel } from "langchain/chat_models/universal";
-import { agentMemory, ThreadState, getLatestContext } from './memory';
+import { agentMemory, ThreadState } from './memory';
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import ChatModels from "./types/llm";
 import { tools } from "./tools";
