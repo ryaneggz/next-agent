@@ -17,7 +17,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
         components={{
-        a: ({ node, ...props }) => (
+        a: ({ ...props }) => (
           <a
             {...props}
             className="text-blue-600 hover:text-blue-800 underline"
@@ -26,7 +26,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           />
         ),
         // Custom code block styling
-        code: ({ inline, className, children, ...props }: any) => {
+        code: ({ inline, className, children, ...props }: { inline?: boolean; className?: string; children: React.ReactNode; [key: string]: unknown }) => {
           if (inline) {
             return (
               <code
@@ -39,7 +39,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           }
           return (
             <code
-              className={`${className} block bg-gray-100 p-2 rounded text-xs font-mono overflow-x-auto`}
+              className={`${className || ''} block bg-gray-100 p-2 rounded text-xs font-mono overflow-x-auto`}
               {...props}
             >
               {children}
@@ -47,25 +47,25 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           );
         },
         // Custom pre styling for code blocks
-        pre: ({ node, ...props }) => (
+        pre: ({ ...props }) => (
           <pre
             className="bg-gray-100 p-2 rounded overflow-x-auto text-xs"
             {...props}
           />
         ),
         // Custom paragraph styling
-        p: ({ node, ...props }) => (
+        p: ({ ...props }) => (
           <p className="mb-2 last:mb-0" {...props} />
         ),
         // Custom list styling
-        ul: ({ node, ...props }) => (
+        ul: ({ ...props }) => (
           <ul className="list-disc list-inside mb-2 space-y-1" {...props} />
         ),
-        ol: ({ node, ...props }) => (
+        ol: ({ ...props }) => (
           <ol className="list-decimal list-inside mb-2 space-y-1" {...props} />
         ),
         // Custom blockquote styling
-        blockquote: ({ node, ...props }) => (
+        blockquote: ({ ...props }) => (
           <blockquote
             className="border-l-4 border-gray-300 pl-4 italic text-gray-600 my-2"
             {...props}
