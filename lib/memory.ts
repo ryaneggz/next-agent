@@ -1,6 +1,12 @@
 
 export type ThreadState = {
   thread: {
+    usage: {
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+    };
+    systemMessage?: string;
     events: {
       intent: string;
       content: string;
@@ -32,11 +38,26 @@ export async function agentMemory(
   // Add the new event to the state
   const newState = {
     thread: {
+      usage: state.thread.usage,
+      systemMessage: state.thread.systemMessage,
       events: [...state.thread.events, event]
     }
   };
 
   return newState;
+}
+
+export function updateSystemMessage(state: ThreadState, systemMessage: string): ThreadState {
+  return {
+    thread: {
+      ...state.thread,
+      systemMessage
+    }
+  };
+}
+
+export function getSystemMessage(state: ThreadState): string {
+  return state.thread.systemMessage || 'You are a helpful AI assistant.';
 }
 
 export function parseEvents(state: ThreadState): { intent: string, content: string }[] {

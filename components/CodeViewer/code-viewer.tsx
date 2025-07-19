@@ -8,6 +8,7 @@ import xml from "highlight.js/lib/languages/xml";
 import json from "highlight.js/lib/languages/json";
 import "highlight.js/styles/github.css";
 import { convertStateToXML } from "@/lib/memory";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 // Register languages
 hljs.registerLanguage('xml', xml);
@@ -20,103 +21,8 @@ function CodeViewer() {
 	const codeRef = useRef<HTMLElement>(null);
 	const [viewMode, setViewMode] = useState<ViewMode>('md');
 
-	// Function to convert URLs and markdown links to clickable links
-	const makeLinksClickable = (text: string): React.JSX.Element => {
-		if (!text) return <span>{text}</span>;
-
-		// URL regex pattern
-		const urlRegex = /(https?:\/\/[^\s<>"]+)/gi;
-		// Markdown link regex pattern
-		const markdownLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/gi;
-
-		const elements: React.JSX.Element[] = [];
-		let lastIndex = 0;
-
-		// First, handle markdown links
-		let markdownMatch: RegExpExecArray | null;
-		const markdownMatches: { match: string; text: string; url: string; index: number }[] = [];
-		
-		while ((markdownMatch = markdownLinkRegex.exec(text)) !== null) {
-			markdownMatches.push({
-				match: markdownMatch[0],
-				text: markdownMatch[1],
-				url: markdownMatch[2],
-				index: markdownMatch.index
-			});
-		}
-
-		// Then handle plain URLs (excluding those already in markdown links)
-		let urlMatch: RegExpExecArray | null;
-		const urlMatches: { match: string; url: string; index: number }[] = [];
-		
-		while ((urlMatch = urlRegex.exec(text)) !== null) {
-			// Check if this URL is part of a markdown link
-			const isInMarkdown = markdownMatches.some(md => 
-				urlMatch!.index >= md.index && urlMatch!.index < md.index + md.match.length
-			);
-			
-			if (!isInMarkdown) {
-				urlMatches.push({
-					match: urlMatch[0],
-					url: urlMatch[0],
-					index: urlMatch.index
-				});
-			}
-		}
-
-		// Combine and sort all matches by index
-		const allMatches = [
-			...markdownMatches.map(m => ({ ...m, type: 'md' as const })),
-			...urlMatches.map(m => ({ ...m, type: 'url' as const, text: m.url }))
-		].sort((a, b) => a.index - b.index);
-
-		// Build JSX elements
-		allMatches.forEach((match, index) => {
-			// Add text before this match
-			if (match.index > lastIndex) {
-				const beforeText = text.slice(lastIndex, match.index);
-				if (beforeText) {
-					elements.push(<span key={`text-${index}`}>{beforeText}</span>);
-				}
-			}
-
-			// Add the link
-			elements.push(
-				<a
-					key={`link-${index}`}
-					href={match.url}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="text-blue-600 hover:text-blue-800 underline"
-				>
-					{match.text}
-				</a>
-			);
-
-			lastIndex = match.index + match.match.length;
-		});
-
-		// Add remaining text
-		if (lastIndex < text.length) {
-			const remainingText = text.slice(lastIndex);
-			if (remainingText) {
-				elements.push(<span key="text-end">{remainingText}</span>);
-			}
-		}
-
-		// If no matches found, return original text
-		if (elements.length === 0) {
-			return <span>{text}</span>;
-		}
-
-		return <>{elements}</>;
-	};
-
-
-
 	useEffect(() => {
-		if (codeRef.current && state && (viewMode === 'xml' || viewMode === 'json')) {
-			// Apply syntax highlighting for XML and JSON views
+		if (codeRef.current && (viewMode === 'xml' || viewMode === 'json')) {
 			hljs.highlightElement(codeRef.current);
 		}
 	}, [state, viewMode]);
@@ -133,19 +39,25 @@ function CodeViewer() {
 										{event.intent === 'user_input' && (
 											<div className="mb-2">
 												<strong className="text-blue-600">👤 User:</strong>
-												<div className="mt-1 text-gray-800">{makeLinksClickable(event.content)}</div>
+												<div className="mt-1">
+													<MarkdownRenderer content={event.content} className="text-gray-800" />
+												</div>
 											</div>
 										)}
 										{event.intent === 'llm_response' && (
 											<div className="mb-2">
 												<strong className="text-green-600">🤖 Assistant:</strong>
-												<div className="mt-1 text-gray-800">{makeLinksClickable(event.content)}</div>
+												<div className="mt-1">
+													<MarkdownRenderer content={event.content} className="text-gray-800" />
+												</div>
 											</div>
 										)}
 										{event.intent !== 'user_input' && event.intent !== 'llm_response' && (
 											<div className="mb-2">
 												<strong className="text-purple-600">🔧 Tool ({event.intent}):</strong>
-												<div className="mt-1 text-gray-800">{makeLinksClickable(event.content)}</div>
+												<div className="mt-1">
+													<MarkdownRenderer content={event.content} className="text-gray-800" />
+												</div>
 											</div>
 										)}
 									</div>
