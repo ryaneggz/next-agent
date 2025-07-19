@@ -45,8 +45,8 @@ export default function useChat() {
 
 	const useTotalTokensEffect = () => {
 		useEffect(() => {
-			setTotalTokens(totalTokens + (state.thread.usage.total_tokens));
-		}, [state.thread.usage.total_tokens]);
+			setTotalTokens(totalTokens + (state.thread.usage?.total_tokens || 0));
+		}, [state.thread.usage?.total_tokens]);
 	}
   
 	return {

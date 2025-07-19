@@ -91,5 +91,5 @@ export function convertStateToXML(state: ThreadState): string {
     return `<event ${attrs.join(' ')}>${event.content}</event>`;
   }).join('\n  ');
   
-  return `<thread>\n  ${events}\n</thread>`;
+  return `<thread>\n${events}\n</thread>`;
 }
