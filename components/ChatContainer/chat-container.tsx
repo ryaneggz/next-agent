@@ -11,7 +11,7 @@ export function ChatContainer() {
 		setSystemMessage,
 		systemMessage,
 		isLoading,
-		setMemory,
+		setState,
 		setIsLoading,
 		model,
 		input,
@@ -82,7 +82,8 @@ export function ChatContainer() {
                 const data = JSON.parse(line.slice(6));
                 
                 if (data.type === 'memory') {
-                  setMemory(data.memory);
+                  // data.memory is already XML format from the server
+                  setState(data.state);
                 } else if (data.type === 'content') {
                   streamingResponse += data.content;
                   setLog((prev: string[]) => {
@@ -95,7 +96,8 @@ export function ChatContainer() {
                     scrollToBottom();
                   }, 50);
                 } else if (data.type === 'complete') {
-                  setMemory(data.memory);
+                  // data.memory is already XML format from the server
+                  setState(data.state);
                 } else if (data.type === 'error') {
                   setLog((prev: string[]) => [...prev.slice(0, -1), `Error: ${data.error}`]);
                 }
@@ -110,9 +112,9 @@ export function ChatContainer() {
         const data = await res.json();
         setLog((prev: string[]) => [...prev, `Agent: ${data.response}`]);
         
-        // Update memory state with the XML response
-        if (data.memory) {
-          setMemory(data.memory);
+        // Update memory state - data.state is already XML format from the server
+        if (data.state) {
+          setState(data.state);
         }
       }
     } catch (error) {

@@ -38,6 +38,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
               <code
                 className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-xs font-mono"
                 {...props}
+                {...rest}
               >
                 {children}
               </code>

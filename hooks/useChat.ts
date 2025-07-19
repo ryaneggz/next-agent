@@ -1,4 +1,5 @@
 
+import { ThreadState } from "@/lib/memory";
 import ChatModels from "@/lib/types/llm";
 import { useEffect, useRef, useState} from "react";
 
@@ -10,7 +11,11 @@ export default function useChat() {
 	const [input, setInput] = useState<string>('');
 	const [systemMessage, setSystemMessage] = useState('You are a helpful AI assistant.');
 	const [model, setModel] = useState<ChatModels>('');
-  const [memory, setMemory] = useState<string>('');
+  const [state, setState] = useState<ThreadState>({
+    thread: {
+      events: []
+    }
+  });
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSystemEditorOpen, setIsSystemEditorOpen] = useState(false);
@@ -30,12 +35,12 @@ export default function useChat() {
 		chatContainerRef,
 		inputRef,
 		isLoading,
-		memory,
+		state,
 		systemMessage,
 		setSystemMessage,
 		isSystemEditorOpen,
 		setIsSystemEditorOpen,
-		setMemory,
+		setState,
 		setInput,
 		setIsLoading,
 		input,

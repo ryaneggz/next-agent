@@ -1,63 +1,70 @@
-import { parseStringPromise, Builder } from 'xml2js';
 
-export async function addEvent(xml: string, intent: string, content: string): Promise<string> {
-  const thread = await parseStringPromise(xml || '<thread></thread>');
+export type ThreadState = {
+  thread: {
+    events: {
+      intent: string;
+      content: string;
+      type?: string;
+      status?: string;
+      done?: string;
+    }[];
+  };
+};
 
-  // Ensure the thread structure exists
-  if (!thread.thread) {
-    thread.thread = {};
-  }
+export async function agentMemory(
+  intent: string,
+  content: string,
+  state: ThreadState,
+): Promise<ThreadState> {
+  // Create event object
+  const event: ThreadState['thread']['events'][0] = {
+    intent,
+    content
+  };
 
-  // Initialize event array if it doesn't exist
-  if (!thread.thread.event) {
-    thread.thread.event = [];
-  }
-
-  // Build event attributes
-  let eventAttrs: Record<string, string | boolean> = { intent };
+  // Add additional attributes for tool events
   if (intent !== 'user_input' && intent !== 'llm_response') {
-    eventAttrs = {
-      ...eventAttrs,
-      type: "tool",
-      status: "success",
-      done: "true"
-    };
+    event.type = "tool";
+    event.status = "success";
+    event.done = "true";
   }
 
-  // Add the new event
-  thread.thread.event.push({
-    $: eventAttrs,
-    _: content
-  });
-
-  const builder = new Builder({
-    headless: true,
-    renderOpts: {
-      pretty: true,
+  // Add the new event to the state
+  const newState = {
+    thread: {
+      events: [...state.thread.events, event]
     }
-  });
-  return builder.buildObject(thread);
+  };
+
+  return newState;
 }
 
-export function parseEvents(xml: string): { intent: string, content: string }[] {
-  if (!xml) return [];
+export function parseEvents(state: ThreadState): { intent: string, content: string }[] {
+  return state.thread.events.map(event => ({
+    intent: event.intent,
+    content: event.content
+  }));
+}
+
+export function getLatestContext(state: ThreadState): string {
+  const events = parseEvents(state);
+  if (events.length === 0) return "";
   
-  const events: { intent: string, content: string }[] = [];
+  // Get the last few events to understand current context
+  const recentEvents = events.slice(-3);
+  return recentEvents.map(e => `${e.intent}: ${e.content}`).join('\n');
+}
+
+export function convertStateToXML(state: ThreadState): string {
+  // Convert to XML format for components that still expect it
+  const events = state.thread.events.map(event => {
+    const attrs = [`intent="${event.intent}"`];
+    if (event.type) attrs.push(`type="${event.type}"`);
+    if (event.status) attrs.push(`status="${event.status}"`);
+    if (event.done) attrs.push(`done="${event.done}"`);
+    
+    return `<event ${attrs.join(' ')}>${event.content}</event>`;
+  }).join('\n  ');
   
-  // Simple regex parsing for the XML format
-  const eventMatches = xml.match(/<event intent="([^"]*)"[^>]*>([^<]*)<\/event>/g);
-  if (eventMatches) {
-    eventMatches.forEach(match => {
-      const intentMatch = match.match(/intent="([^"]*)"/);
-      const contentMatch = match.match(/>([^<]*)</);
-      if (intentMatch && contentMatch) {
-        events.push({
-          intent: intentMatch[1],
-          content: contentMatch[1]
-        });
-      }
-    });
-  }
-  
-  return events;
+  return `<thread>\n  ${events}\n</thread>`;
 }

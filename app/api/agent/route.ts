@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLLMResponse, getLLMResponseStream, handleToolCall } from '@/lib/classify';
-import { addEvent } from '@/lib/memory';
+import { getLLMResponse, getLLMResponseStream, agentLoop } from '@/lib/classify';
+import { agentMemory, ThreadState, convertStateToXML } from '@/lib/memory';
 
-let threadXML = ""; // Simple in-memory store. Replace with DB or file store as needed.
+let state: ThreadState = {
+  thread: {
+    events: []
+  }
+}; // Simple in-memory store. Replace with DB or file store as needed.
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,13 +18,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Add user input as an event
-    threadXML = await addEvent(threadXML, 'user_input', input);
-    threadXML = await handleToolCall(input, model, threadXML);
-
+    state = await agentMemory('user_input', input, state);
+    state = await agentLoop(input, state, model);
+    const prompt = convertStateToXML(state) + "\n\nResponse:";
+    
     // Check if streaming is requested
     if (stream) {
       // Return streaming response
-      const llmStream = await getLLMResponseStream(threadXML + "\n\n Response:", systemMessage, model);
+      const llmStream = await getLLMResponseStream(prompt, systemMessage, model);
       
       let fullResponse = '';
       
@@ -28,10 +33,10 @@ export async function POST(req: NextRequest) {
       const readable = new ReadableStream({
         async start(controller) {
           try {
-            // Send initial data with memory
+            // Send initial data with memory (convert to XML for compatibility)
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
               type: 'memory', 
-              memory: threadXML 
+              state 
             })}\n\n`));
             
             // Process streaming response
@@ -47,12 +52,12 @@ export async function POST(req: NextRequest) {
             }
             
             // Add final response to memory
-            threadXML = await addEvent(threadXML, 'llm_response', fullResponse);
+            state = await agentMemory('llm_response', fullResponse, state);
             
-            // Send completion message
+            // Send completion message (convert to XML for compatibility)
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
               type: 'complete', 
-              memory: threadXML 
+              state
             })}\n\n`));
             
             controller.close();
@@ -76,12 +81,13 @@ export async function POST(req: NextRequest) {
       });
     } else {
       // Non-streaming response (fallback)
-      const llmResponse = await getLLMResponse(threadXML + "\n\n Response:", systemMessage, model);
-      threadXML = await addEvent(threadXML, 'llm_response', llmResponse);
+      const prompt = convertStateToXML(state) + "\n\nResponse:";
+      const llmResponse = await getLLMResponse(prompt, systemMessage, model);
+      state = await agentMemory('llm_response', llmResponse, state);
 
       return NextResponse.json({ 
         response: llmResponse, 
-        memory: threadXML 
+        state: state
       });
     }
   } catch (error) {
