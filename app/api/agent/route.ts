@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
             // Send initial data with memory (convert to XML for compatibility)
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
               type: 'memory', 
-              memory: convertStateToXML(state) 
+              state 
             })}\n\n`));
             
             // Process streaming response
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
             // Send completion message (convert to XML for compatibility)
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
               type: 'complete', 
-              memory: convertStateToXML(state) 
+              state
             })}\n\n`));
             
             controller.close();
@@ -81,12 +81,13 @@ export async function POST(req: NextRequest) {
       });
     } else {
       // Non-streaming response (fallback)
-      const llmResponse = await getLLMResponse(state, systemMessage, model);
+      const prompt = convertStateToXML(state) + "\n\nResponse:";
+      const llmResponse = await getLLMResponse(prompt, systemMessage, model);
       state = await agentMemory('llm_response', llmResponse, state);
 
       return NextResponse.json({ 
         response: llmResponse, 
-        memory: convertStateToXML(state) // Convert to XML for compatibility
+        state: state
       });
     }
   } catch (error) {

@@ -6,6 +6,7 @@ import { formatXML } from "@/lib/utils";
 import hljs from "highlight.js/lib/core";
 import xml from "highlight.js/lib/languages/xml";
 import "highlight.js/styles/github.css";
+import { convertStateToXML } from "@/lib/memory";
 
 // Register the XML language
 hljs.registerLanguage('xml', xml);
@@ -17,7 +18,7 @@ interface ParsedEvent {
 }
 
 function CodeViewer() {
-	const { memory } = useChatContext();
+	const { state } = useChatContext();
 	const codeRef = useRef<HTMLElement>(null);
 	const [parsedEvents, setParsedEvents] = useState<ParsedEvent[]>([]);
 	const [showInteractive, setShowInteractive] = useState(false);
@@ -114,18 +115,18 @@ function CodeViewer() {
 
 	// Parse XML to extract events
 	useEffect(() => {
-		if (memory) {
+		if (state.thread.events.length > 0) {
 			try {
 				const events: ParsedEvent[] = [];
-				const eventMatches = memory.match(/<event[^>]*>([^<]*)<\/event>/g);
 				
-				if (eventMatches) {
-					eventMatches.forEach((match: string) => {
-						const intentMatch = match.match(/intent="([^"]*)"/);
-						const typeMatch = match.match(/type="([^"]*)"/);
-						const statusMatch = match.match(/status="([^"]*)"/);
-						const doneMatch = match.match(/done="([^"]*)"/);
-						const contentMatch = match.match(/>([^<]*)</);
+				state.thread.events.forEach((event: any) => {
+					const content = event.content;
+					if (content && typeof content === 'string') {
+						const intentMatch = content.match(/intent="([^"]*)"/);
+						const typeMatch = content.match(/type="([^"]*)"/);
+						const statusMatch = content.match(/status="([^"]*)"/);
+						const doneMatch = content.match(/done="([^"]*)"/);
+						const contentMatch = content.match(/>([^<]*)</);
 						
 						if (intentMatch && contentMatch) {
 							const attributes: Record<string, string> = {};
@@ -139,24 +140,25 @@ function CodeViewer() {
 								attributes
 							});
 						}
-					});
-				}
+					}
+				});
+				
 				setParsedEvents(events);
 			} catch (error) {
 				console.error('Error parsing XML:', error);
 				setParsedEvents([]);
 			}
 		}
-	}, [memory]);
+	}, [state]);
 
 	useEffect(() => {
-		if (codeRef.current && memory && !showInteractive) {
+		if (codeRef.current && state && !showInteractive) {
 			// Apply syntax highlighting only when showing raw XML
 			hljs.highlightElement(codeRef.current);
 		}
-	}, [memory, showInteractive]);
+	}, [state, showInteractive]);
 
-	return memory && (
+	return state.thread.events.length > 0 && (
 		<div className="mt-6 bg-white rounded-2xl shadow-xl overflow-hidden">
 			<div className="bg-gray-800 text-white px-6 py-3 flex items-center justify-between">
 				<h3 className="text-lg font-semibold flex items-center">
@@ -212,7 +214,7 @@ function CodeViewer() {
 					</div>
 				) : (
 					<pre className="bg-gray-50 rounded-lg p-0 overflow-x-auto text-sm text-gray-800 border max-h-[250px] overflow-y-auto">
-						<code ref={codeRef} className="language-xml block p-4">{formatXML(memory)}</code>
+						<code ref={codeRef} className="language-xml block p-4">{formatXML(convertStateToXML(state))}</code>
 					</pre>
 				)}
 			</div>

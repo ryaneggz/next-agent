@@ -42,7 +42,7 @@ interface MathIntent {
 
 interface NoIntent {
   intent: 'none';
-  args: {};
+  args: Record<string, never>;
 }
 
 type ToolIntent = WeatherIntent | StockIntent | WebSearchIntent | MathIntent | NoIntent;
@@ -83,14 +83,13 @@ Respond with only the JSON array, no additional text.
 }
 
 export async function getLLMResponse(
-  state: ThreadState,
+  ctxWindow: string,
   systemMessage: string,
   modelName: ChatModels = ChatModels.OPENAI_GPT_4_1_MINI,
-): Promise<any> {
-  const context = getLatestContext(state);
+): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
   const messages = [
     { role: "system", content: systemMessage },
-    { role: "user", content: context }
+    { role: "user", content: ctxWindow }
   ];
 
   const model = await getModel(modelName);
