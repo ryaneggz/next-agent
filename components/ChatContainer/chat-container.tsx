@@ -19,6 +19,7 @@ export function ChatContainer() {
 		log,
 		setLog,
 		useInitModelEffect,
+		state,
 	} = useChatContext();
 
 	// Scroll functions
@@ -56,7 +57,7 @@ export function ChatContainer() {
       const res = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: userMessage, systemMessage, model, stream: true }),
+        body: JSON.stringify({ input: userMessage, model, stream: true, state }),
       });
 
       if (res.headers.get('content-type')?.includes('text/event-stream')) {
@@ -125,8 +126,8 @@ export function ChatContainer() {
     } 
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !isLoading) {
       e.preventDefault();
       handleSubmit();
     }
@@ -148,7 +149,7 @@ export function ChatContainer() {
 	useInitModelEffect();
 	useEffect(() => {
 		if (model) {
-			localStorage.setItem('model', model.toString());
+			localStorage.setItem('model', model);
 		}
 	}, [model]);
 

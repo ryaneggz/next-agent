@@ -1,5 +1,5 @@
 
-import { ThreadState } from "@/lib/memory";
+import { ThreadState, updateSystemMessage, getSystemMessage } from "@/lib/memory";
 import ChatModels from "@/lib/types/llm";
 import { useEffect, useRef, useState} from "react";
 
@@ -9,16 +9,22 @@ export default function useChat() {
 	
 	const [log, setLog] = useState<string[]>([]);
 	const [input, setInput] = useState<string>('');
-	const [systemMessage, setSystemMessage] = useState('You are a helpful AI assistant.');
 	const [model, setModel] = useState<ChatModels>('');
   const [state, setState] = useState<ThreadState>({
     thread: {
+      systemMessage: 'You are a helpful AI assistant.',
       events: []
     }
   });
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSystemEditorOpen, setIsSystemEditorOpen] = useState(false);
+
+  // System message helpers
+  const systemMessage = getSystemMessage(state);
+  const setSystemMessage = (message: string) => {
+    setState(currentState => updateSystemMessage(currentState, message));
+  };
 
 	const useInitModelEffect = () => {
 		useEffect(() => {
