@@ -23,7 +23,7 @@ const math_calculator = tool(
       }
       
       return `${expression} = ${result}`;
-    } catch (error) {
+    } catch {
       return `Error: Invalid math expression - ${expression}`;
     }
   },
