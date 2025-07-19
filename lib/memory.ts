@@ -1,6 +1,10 @@
 import { parseStringPromise, Builder } from 'xml2js';
 
-export async function addEvent(xml: string, intent: string, content: string): Promise<string> {
+export async function agentMemory(
+  intent: string,
+  content: string,
+  xml: string,
+): Promise<string> {
   const thread = await parseStringPromise(xml || '<thread></thread>');
 
   // Ensure the thread structure exists
@@ -60,4 +64,13 @@ export function parseEvents(xml: string): { intent: string, content: string }[] 
   }
   
   return events;
+}
+
+export function getLatestContext(threadXML: string): string {
+  const events = parseEvents(threadXML);
+  if (events.length === 0) return "";
+  
+  // Get the last few events to understand current context
+  const recentEvents = events.slice(-3);
+  return recentEvents.map(e => `${e.intent}: ${e.content}`).join('\n');
 }

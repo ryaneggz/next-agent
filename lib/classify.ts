@@ -1,5 +1,5 @@
 import { initChatModel } from "langchain/chat_models/universal";
-import { addEvent, parseEvents } from './memory';
+import { agentMemory } from './memory';
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import ChatModels from "./types/llm";
 import { tools } from "./tools";
@@ -93,7 +93,7 @@ export async function getLLMResponse(threadXML: string, systemMessage?: string, 
     },
 		{
 			role: "user",
-			content: threadXML
+			content: threadXML + "\n\n Response:\n"
 		}
   ];
 
@@ -114,7 +114,7 @@ export async function getLLMResponseStream(threadXML: string, systemMessage?: st
     },
 	{
 		role: "user",
-		content: threadXML
+		content: threadXML + "\n\n Response:\n"
 	}
   ];
 
@@ -124,19 +124,13 @@ export async function getLLMResponseStream(threadXML: string, systemMessage?: st
   return response;
 }
 
-// Function to get the latest context for tool classification
-export function getLatestContext(threadXML: string): string {
-  const events = parseEvents(threadXML);
-  if (events.length === 0) return "";
-  
-  // Get the last few events to understand current context
-  const recentEvents = events.slice(-3);
-  return recentEvents.map(e => `${e.intent}: ${e.content}`).join('\n');
-}
-
-export async function handleToolCall(input: string, model: string, threadXML: string) {
+export async function agentLoop(
+  query: string, 
+  threadXML: string,
+  model: ChatModels = ChatModels.OPENAI_GPT_4_1_MINI,
+) {
   // Tool execution - classify all tools from the input at once
-    const toolIntents = await classifyIntent(input, model);
+    const toolIntents = await classifyIntent(query, model.toString());
     
     // Execute all identified tools
     for (const toolIntent of toolIntents) {
@@ -166,9 +160,8 @@ export async function handleToolCall(input: string, model: string, threadXML: st
         }
         
         // Add tool execution as an event
-        threadXML = await addEvent(threadXML, intent, toolOutput);
+        threadXML = await agentMemory(intent, toolOutput, threadXML);
       }
     }
-
     return threadXML;
 }
