@@ -100,7 +100,7 @@ export function ChatContainer() {
                   // data.memory is already XML format from the server
                   setState(data.state);
                 } else if (data.type === 'error') {
-                  setLog((prev: string[]) => [...prev.slice(0, -1), `Error: ${data.error}`]);
+                  setLog((prev: string[]) => [...prev.slice(0, -1), `Error: ${data.error || data.error.message}`]);
                 }
               } catch (e) {
                 console.error('Error parsing SSE data:', e);
@@ -111,7 +111,7 @@ export function ChatContainer() {
       } else {
         // Handle regular JSON response (fallback)
         const data = await res.json();
-        setLog((prev: string[]) => [...prev, `Error: ${data.error.message}`]);
+        setLog((prev: string[]) => [...prev, `Error: ${data.error || data.error.message}`]);
         
         // Update memory state - data.state is already XML format from the server
         if (data.state) {
