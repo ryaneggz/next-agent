@@ -1,5 +1,6 @@
 import yahooFinance from 'yahoo-finance2';
 import { tool } from "@langchain/core/tools";
+import { TavilySearch } from "@langchain/tavily";
 import { z } from "zod";
 
 const multiply = tool(
@@ -19,11 +20,24 @@ const multiply = tool(
   }
 );
 
+const web_search = new TavilySearch({
+  maxResults: 10,
+  topic: "general",
+  // includeAnswer: false,
+  // includeRawContent: false,
+  // includeImages: false,
+  // includeImageDescriptions: false,
+  // searchDepth: "basic",
+  // timeRange: "day",
+  // includeDomains: [],
+  // excludeDomains: [],
+});
+
 export const tools = {
   get_weather: ({ location }: { location: string }) => {
     return `The weather in ${location} is sunny and 88°F.`; // Stubbed
   },
-  
+  web_search,
   multiply,
   
   get_stock_info: async ({ ticker }: { ticker: string }) => {

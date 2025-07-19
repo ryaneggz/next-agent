@@ -29,7 +29,7 @@ export default function Home() {
 
         {/* Footer */}
         <div className="text-center mt-6 text-gray-500 text-sm">
-          Powered by Next.js & AI
+          Powered by Next.js x <a href="https://github.com/enso-labs" target="_blank" rel="noopener noreferrer">Enso Labs</a> x <a href="https://js.langchain.com/docs/how_to/chat_models_universal_init/" target="_blank" rel="noopener noreferrer">Langchain 🦜🔗</a>
         </div>
 
         {/* XML Memory Display */}

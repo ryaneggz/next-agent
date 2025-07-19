@@ -1,8 +1,7 @@
 "use client";
 
-import ChatModels from "@/lib/types/llm";
 import { useChatContext } from "@/providers/ChatProvider";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export function ChatContainer() {
 	const { 
@@ -18,7 +17,6 @@ export function ChatContainer() {
 		setInput,
 		log,
 		setLog,
-		setModel,
 		useInitModelEffect,
 	} = useChatContext();
 

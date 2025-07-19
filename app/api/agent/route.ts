@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { classifyIntent, getLLMResponse, getLLMResponseStream } from '@/lib/classify';
+import { classifyIntent, getLLMResponse, getLLMResponseStream, handleToolCall } from '@/lib/classify';
 import { tools } from '@/lib/tools';
 import { addEvent } from '@/lib/memory';
 
@@ -16,38 +16,7 @@ export async function POST(req: NextRequest) {
 
     // Add user input as an event
     threadXML = await addEvent(threadXML, 'user_input', input);
-
-    // Tool execution - classify all tools from the input at once
-    const toolIntents = await classifyIntent(input, model);
-    
-    // Execute all identified tools
-    for (const toolIntent of toolIntents) {
-      const { intent, args } = toolIntent;
-      
-      if (intent === 'none') {
-        // No tools to execute, continue to LLM response
-        continue;
-      }
-      
-      if (intent in tools) {
-        let toolOutput: string;
-        
-        // Execute the specific tool
-        if (intent === 'get_weather' && 'location' in args) {
-          toolOutput = tools.get_weather(args as { location: string });
-        } else if (intent === 'get_stock_info' && 'ticker' in args) {
-          toolOutput = await tools.get_stock_info(args as { ticker: string });
-        } else if (intent === 'multiply' && 'a' in args && 'b' in args) {
-          const result = await tools.multiply.invoke(args as { a: number; b: number });
-          toolOutput = `${args.a} × ${args.b} = ${result}`;
-        } else {
-          toolOutput = `Invalid arguments for tool: ${intent}`;
-        }
-        
-        // Add tool execution as an event
-        threadXML = await addEvent(threadXML, intent, toolOutput);
-      }
-    }
+    threadXML = await handleToolCall(input, model, threadXML);
 
     // Check if streaming is requested
     if (stream) {
