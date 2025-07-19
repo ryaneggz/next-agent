@@ -105,11 +105,22 @@ export async function POST(req: NextRequest) {
         state: state
       });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('API Error:', error);
-    return NextResponse.json(
-      { error: "Internal server error" }, 
-      { status: 500 }
-    );
+    if (error instanceof Error) {
+      if (error.message.includes('400')) {
+        const errorMessage = error.message.split('400 ')[1];
+        const errorObject = JSON.parse(errorMessage);
+        return NextResponse.json({ 
+          error: {
+            message: `(${errorObject.error.type}) ${errorObject.error.message}`,
+            type: errorObject.error.type
+          }
+        }, { status: 400 });
+      } else {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+    }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

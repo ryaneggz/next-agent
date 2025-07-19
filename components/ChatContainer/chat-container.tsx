@@ -111,7 +111,7 @@ export function ChatContainer() {
       } else {
         // Handle regular JSON response (fallback)
         const data = await res.json();
-        setLog((prev: string[]) => [...prev, `Agent: ${data.response}`]);
+        setLog((prev: string[]) => [...prev, `Error: ${data.error.message}`]);
         
         // Update memory state - data.state is already XML format from the server
         if (data.state) {
