@@ -26,7 +26,13 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           />
         ),
         // Custom code block styling
-        code: ({ inline, className, children, ...props }: { inline?: boolean; className?: string; children: React.ReactNode; [key: string]: unknown }) => {
+        code(props) {
+          const { inline, className, children, ...rest } = props as {
+            inline?: boolean;
+            className?: string;
+            children?: React.ReactNode;
+            [key: string]: unknown;
+          };
           if (inline) {
             return (
               <code
