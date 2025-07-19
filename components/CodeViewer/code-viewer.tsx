@@ -5,23 +5,20 @@ import { useChatContext } from "@/providers/ChatProvider";
 import { formatXML } from "@/lib/utils";
 import hljs from "highlight.js/lib/core";
 import xml from "highlight.js/lib/languages/xml";
+import json from "highlight.js/lib/languages/json";
 import "highlight.js/styles/github.css";
 import { convertStateToXML } from "@/lib/memory";
 
-// Register the XML language
+// Register languages
 hljs.registerLanguage('xml', xml);
+hljs.registerLanguage('json', json);
 
-interface ParsedEvent {
-	intent: string;
-	content: string;
-	attributes: Record<string, string>;
-}
+type ViewMode = 'md' | 'xml' | 'json';
 
 function CodeViewer() {
 	const { state } = useChatContext();
 	const codeRef = useRef<HTMLElement>(null);
-	const [parsedEvents, setParsedEvents] = useState<ParsedEvent[]>([]);
-	const [showInteractive, setShowInteractive] = useState(false);
+	const [viewMode, setViewMode] = useState<ViewMode>('md');
 
 	// Function to convert URLs and markdown links to clickable links
 	const makeLinksClickable = (text: string): React.JSX.Element => {
@@ -69,30 +66,28 @@ function CodeViewer() {
 
 		// Combine and sort all matches by index
 		const allMatches = [
-			...markdownMatches.map(m => ({ ...m, type: 'markdown' as const })),
+			...markdownMatches.map(m => ({ ...m, type: 'md' as const })),
 			...urlMatches.map(m => ({ ...m, type: 'url' as const, text: m.url }))
 		].sort((a, b) => a.index - b.index);
 
-		// Build the JSX with clickable links
-		allMatches.forEach((match: { match: string; text: string; url: string; index: number; type: 'markdown' | 'url' }, i: number) => {
+		// Build JSX elements
+		allMatches.forEach((match, index) => {
 			// Add text before this match
 			if (match.index > lastIndex) {
-				elements.push(
-					<span key={`text-${i}`}>
-						{text.slice(lastIndex, match.index)}
-					</span>
-				);
+				const beforeText = text.slice(lastIndex, match.index);
+				if (beforeText) {
+					elements.push(<span key={`text-${index}`}>{beforeText}</span>);
+				}
 			}
 
-			// Add the clickable link
+			// Add the link
 			elements.push(
 				<a
-					key={`link-${i}`}
+					key={`link-${index}`}
 					href={match.url}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-blue-600 hover:text-blue-800 underline bg-blue-50 px-1 rounded"
-					onClick={(e) => e.stopPropagation()}
+					className="text-blue-600 hover:text-blue-800 underline"
 				>
 					{match.text}
 				</a>
@@ -103,106 +98,56 @@ function CodeViewer() {
 
 		// Add remaining text
 		if (lastIndex < text.length) {
-			elements.push(
-				<span key="text-end">
-					{text.slice(lastIndex)}
-				</span>
-			);
-		}
-
-		return elements.length > 0 ? <>{elements}</> : <span>{text}</span>;
-	};
-
-	// Parse XML to extract events
-	useEffect(() => {
-		if (state.thread.events.length > 0) {
-			try {
-				const events: ParsedEvent[] = [];
-				
-				state.thread.events.forEach((event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-					const content = event.content;
-					if (content && typeof content === 'string') {
-						const intentMatch = content.match(/intent="([^"]*)"/);
-						const typeMatch = content.match(/type="([^"]*)"/);
-						const statusMatch = content.match(/status="([^"]*)"/);
-						const doneMatch = content.match(/done="([^"]*)"/);
-						const contentMatch = content.match(/>([^<]*)</);
-						
-						if (intentMatch && contentMatch) {
-							const attributes: Record<string, string> = {};
-							if (typeMatch) attributes.type = typeMatch[1];
-							if (statusMatch) attributes.status = statusMatch[1];
-							if (doneMatch) attributes.done = doneMatch[1];
-
-							events.push({
-								intent: intentMatch[1],
-								content: contentMatch[1],
-								attributes
-							});
-						}
-					}
-				});
-				
-				setParsedEvents(events);
-			} catch (error) {
-				console.error('Error parsing XML:', error);
-				setParsedEvents([]);
+			const remainingText = text.slice(lastIndex);
+			if (remainingText) {
+				elements.push(<span key="text-end">{remainingText}</span>);
 			}
 		}
-	}, [state]);
+
+		// If no matches found, return original text
+		if (elements.length === 0) {
+			return <span>{text}</span>;
+		}
+
+		return <>{elements}</>;
+	};
+
+
 
 	useEffect(() => {
-		if (codeRef.current && state && !showInteractive) {
-			// Apply syntax highlighting only when showing raw XML
+		if (codeRef.current && state && (viewMode === 'xml' || viewMode === 'json')) {
+			// Apply syntax highlighting for XML and JSON views
 			hljs.highlightElement(codeRef.current);
 		}
-	}, [state, showInteractive]);
+	}, [state, viewMode]);
 
-	return state.thread.events.length > 0 && (
-		<div className="mt-6 bg-white rounded-2xl shadow-xl overflow-hidden">
-			<div className="bg-gray-800 text-white px-6 py-3 flex items-center justify-between">
-				<h3 className="text-lg font-semibold flex items-center">
-					<span className="mr-2">🧠</span>
-					Context Window (XML) | Factor 03
-				</h3>
-				<div className="flex items-center space-x-2">
-					<button
-						onClick={() => setShowInteractive(!showInteractive)}
-						className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded transition-colors"
-					>
-						{showInteractive ? 'Show XML' : 'Interactive'}
-					</button>
-				</div>
-			</div>
-			<div className="p-6">
-				{showInteractive ? (
+	const renderContent = () => {
+		switch (viewMode) {
+			case 'md':
+				return (
 					<div className="bg-gray-50 rounded-lg border max-h-[250px] overflow-y-auto">
-						{parsedEvents.length > 0 ? (
-							<div className="space-y-3 p-4">
-								{parsedEvents.map((event, index) => (
-									<div key={index} className="border-l-4 border-blue-200 pl-3">
-										<div className="flex items-center space-x-2 mb-1">
-											<span className="text-xs font-semibold text-gray-600 uppercase">
-												{event.intent.replace('_', ' ')}
-											</span>
-											{event.attributes.type && (
-												<span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-													{event.attributes.type}
-												</span>
-											)}
-											{event.attributes.status && (
-												<span className={`text-xs px-2 py-0.5 rounded ${
-													event.attributes.status === 'success' 
-														? 'bg-green-100 text-green-700' 
-														: 'bg-red-100 text-red-700'
-												}`}>
-													{event.attributes.status}
-												</span>
-											)}
-										</div>
-										<div className="text-sm text-gray-800 leading-relaxed">
-											{makeLinksClickable(event.content)}
-										</div>
+						{state.thread.events.length > 0 ? (
+							<div className="p-4 prose prose-sm max-w-none">
+								{state.thread.events.map((event: any, index: number) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+									<div key={index} className="mb-4">
+										{event.intent === 'user_input' && (
+											<div className="mb-2">
+												<strong className="text-blue-600">👤 User:</strong>
+												<div className="mt-1 text-gray-800">{makeLinksClickable(event.content)}</div>
+											</div>
+										)}
+										{event.intent === 'llm_response' && (
+											<div className="mb-2">
+												<strong className="text-green-600">🤖 Assistant:</strong>
+												<div className="mt-1 text-gray-800">{makeLinksClickable(event.content)}</div>
+											</div>
+										)}
+										{event.intent !== 'user_input' && event.intent !== 'llm_response' && (
+											<div className="mb-2">
+												<strong className="text-purple-600">🔧 Tool ({event.intent}):</strong>
+												<div className="mt-1 text-gray-800">{makeLinksClickable(event.content)}</div>
+											</div>
+										)}
 									</div>
 								))}
 							</div>
@@ -212,11 +157,45 @@ function CodeViewer() {
 							</div>
 						)}
 					</div>
-				) : (
+				);
+			case 'xml':
+				return (
 					<pre className="bg-gray-50 rounded-lg p-0 overflow-x-auto text-sm text-gray-800 border max-h-[250px] overflow-y-auto">
 						<code ref={codeRef} className="language-xml block p-4">{formatXML(convertStateToXML(state))}</code>
 					</pre>
-				)}
+				);
+			case 'json':
+				return (
+					<pre className="bg-gray-50 rounded-lg p-0 overflow-x-auto text-sm text-gray-800 border max-h-[250px] overflow-y-auto">
+						<code ref={codeRef} className="language-json block p-4">{JSON.stringify(state, null, 2)}</code>
+					</pre>
+				);
+			default:
+				return null;
+		}
+	};
+
+	return state.thread.events.length > 0 && (
+		<div className="mt-6 bg-white rounded-2xl shadow-xl overflow-hidden">
+			<div className="bg-gray-800 text-white px-6 py-3 flex items-center justify-between">
+				<h3 className="text-lg font-semibold flex items-center">
+					<span className="mr-2">🧠</span>
+					Context Window | Factor 03
+				</h3>
+				<div className="flex items-center space-x-2">
+					<select
+						value={viewMode}
+						onChange={(e) => setViewMode(e.target.value as ViewMode)}
+						className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded transition-colors text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+					>
+						<option value="md">Markdown</option>
+						<option value="xml">XML</option>
+						<option value="json">JSON</option>
+					</select>
+				</div>
+			</div>
+			<div className="p-6">
+				{renderContent()}
 			</div>
 		</div>
 	);
