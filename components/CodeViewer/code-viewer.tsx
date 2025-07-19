@@ -119,7 +119,7 @@ function CodeViewer() {
 			try {
 				const events: ParsedEvent[] = [];
 				
-				state.thread.events.forEach((event: any) => {
+				state.thread.events.forEach((event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
 					const content = event.content;
 					if (content && typeof content === 'string') {
 						const intentMatch = content.match(/intent="([^"]*)"/);
