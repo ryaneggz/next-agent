@@ -1,5 +1,5 @@
 import { initChatModel } from "langchain/chat_models/universal";
-import { agentMemory } from './memory';
+import { agentMemory, ThreadState, getLatestContext } from './memory';
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import ChatModels from "./types/llm";
 import { tools } from "./tools";
@@ -7,115 +7,106 @@ import YAML from 'yaml'
 
 let model: BaseChatModel | null = null;
 
-async function getModel(modelName?: string) {
+async function getModel(modelName?: ChatModels) {
   const selectedModel = modelName || ChatModels.OPENAI_GPT_4_1_MINI;
   
   // Always create a new model instance if a specific model is requested
   if (modelName || !model) {
-    model = await initChatModel(selectedModel, {
+    model = await initChatModel(selectedModel.toString(), {
       // temperature: 0.7,
     });
   }
   return model;
 }
 
-interface GetWeather {
-  intent: "get_weather";
+// Define tool intent interfaces
+interface WeatherIntent {
+  intent: 'get_weather';
   args: { location: string };
 }
 
-interface GetStockInfo {
-  intent: "get_stock_info";
+interface StockIntent {
+  intent: 'get_stock_info';
   args: { ticker: string };
 }
 
-interface MathCalculator {
-  intent: "math_calculator";
-  args: { expression: string };
-}
-
-interface WebSearch {
-  intent: "web_search";
+interface WebSearchIntent {
+  intent: 'web_search';
   args: { query: string };
 }
 
-interface NoTool {
-  intent: "none";
-  args: Record<string, never>;
+interface MathIntent {
+  intent: 'math_calculator';
+  args: { expression: string };
 }
 
-type ToolIntent = GetWeather | GetStockInfo | MathCalculator | WebSearch | NoTool;
+interface NoIntent {
+  intent: 'none';
+  args: {};
+}
 
-export async function classifyIntent(input: string, modelName?: string): Promise<ToolIntent[]> {
-  const model = await getModel(modelName);
-  const response = await model.invoke([
-    {
-      role: "system",
-      content: `
-You are a JSON tool classifier that can identify multiple tool requests in a single input.
-Analyze the input and identify ALL tool requests present. Return a JSON array of tool objects.
+type ToolIntent = WeatherIntent | StockIntent | WebSearchIntent | MathIntent | NoIntent;
 
-For web search requests, use this format: { "intent": "web_search", "args": { "query": "<search query>" } }
-For weather requests, use this format: { "intent": "get_weather", "args": { "location": "<city>" } }
-For stock information requests, use this format: { "intent": "get_stock_info", "args": { "ticker": "<ticker>" } }
-For math calculations, use this format: { "intent": "math_calculator", "args": { "expression": "<math expression>" } }
-If no tools are needed, return: [{ "intent": "none", "args": {} }]
+export async function classifyIntent(query: string, modelName?: string): Promise<ToolIntent[]> {
+  const prompt = `
+Analyze the following user query and identify if any tools should be executed. Return a JSON array of tool intents.
+
+Available tools:
+1. "get_weather" - for weather information requests (args: {"location": "city name"})
+2. "get_stock_info" - for stock price requests (args: {"ticker": "STOCK_SYMBOL"}) 
+3. "web_search" - for general information searches (args: {"query": "search terms"})
+4. "math_calculator" - for mathematical calculations (args: {"expression": "math expression"})
+
+If no tools are needed, return: [{"intent": "none", "args": {}}]
 
 Examples:
-- "search for the best restaurants in dallas" → [{ "intent": "web_search", "args": { "query": "the best restaurants in dallas" } }]
-- "weather in dallas" → [{ "intent": "get_weather", "args": { "location": "dallas" } }]
-- "price of tsla" → [{ "intent": "get_stock_info", "args": { "ticker": "tsla" } }]
-- "calculate 5 * 3 + 2" → [{ "intent": "math_calculator", "args": { "expression": "5 * 3 + 2" } }]
-- "weather in dallas, price of tsla" → [{ "intent": "get_weather", "args": { "location": "dallas" } }, { "intent": "get_stock_info", "args": { "ticker": "tsla" } }]
-- "how are you today?" → [{ "intent": "none", "args": {} }]
+- "weather in NYC" → [{"intent": "get_weather", "args": {"location": "New York City"}}]
+- "TSLA stock price" → [{"intent": "get_stock_info", "args": {"ticker": "TSLA"}}]
+- "weather in Boston and price of AAPL" → [{"intent": "get_weather", "args": {"location": "Boston"}}, {"intent": "get_stock_info", "args": {"ticker": "AAPL"}}]
+- "calculate 15 * 23" → [{"intent": "math_calculator", "args": {"expression": "15 * 23"}}]
+- "search for latest AI news" → [{"intent": "web_search", "args": {"query": "latest AI news"}}]
 
-Return only the JSON array, no other text.
-        `.trim(),
-    },
-    {
-      role: "user",
-      content: input,
-    },
-  ]);
+User query: "${query}"
+
+Respond with only the JSON array, no additional text.
+  `;
+
+  const messages = [
+    { role: "user", content: prompt }
+  ];
+
+  const model = await getModel(modelName as ChatModels);
+  const response = await model.invoke(messages);
 
   const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content) ?? "[]";
   return JSON.parse(content);
 }
 
-// Function for vanilla LLM responses using event-based memory
-export async function getLLMResponse(threadXML: string, systemMessage?: string, modelName?: string): Promise<string> {
-  
-  // Convert events to conversation format for LLM
-  const messages: { role: "user" | "assistant"|"system", content: string }[] = [
-    {
-      role: "system",
-      content: systemMessage || "You are a helpful AI assistant. Respond naturally and conversationally based on the conversation history."
-    },
-		{
-			role: "user",
-			content: threadXML + "\n\n Response:\n"
-		}
+export async function getLLMResponse(
+  state: ThreadState,
+  systemMessage: string,
+  modelName: ChatModels = ChatModels.OPENAI_GPT_4_1_MINI,
+): Promise<any> {
+  const context = getLatestContext(state);
+  const messages = [
+    { role: "system", content: systemMessage },
+    { role: "user", content: context }
   ];
 
   const model = await getModel(modelName);
   const response = await model.invoke(messages);
 
-  return typeof response.content === 'string' ? response.content : JSON.stringify(response.content) ?? "I'm sorry, I couldn't generate a response.";
+  return response.content;
 }
 
-// Function for streaming LLM responses using event-based memory
-export async function getLLMResponseStream(threadXML: string, systemMessage?: string, modelName?: string) {
-  
-  // Convert events to conversation format for LLM
-  const messages: { role: "user" | "assistant"|"system", content: string }[] = [
-    {
-      role: "system",
-      content: systemMessage || "You are a helpful AI assistant. Respond naturally and conversationally based on the conversation history."
-    },
-	{
-		role: "user",
-		content: threadXML + "\n\n Response:\n"
-	}
+export async function getLLMResponseStream(
+  ctxWindow: string,
+  systemMessage: string,
+  modelName: ChatModels = ChatModels.OPENAI_GPT_4_1_MINI,
+) {
+  const messages = [
+    { role: "system", content: systemMessage },
+    { role: "user", content: ctxWindow }
   ];
 
   const model = await getModel(modelName);
@@ -126,42 +117,42 @@ export async function getLLMResponseStream(threadXML: string, systemMessage?: st
 
 export async function agentLoop(
   query: string, 
-  threadXML: string,
+  state: ThreadState,
   model: ChatModels = ChatModels.OPENAI_GPT_4_1_MINI,
 ) {
   // Tool execution - classify all tools from the input at once
-    const toolIntents = await classifyIntent(query, model.toString());
+  const toolIntents = await classifyIntent(query, model.toString());
+  
+  // Execute all identified tools
+  for (const toolIntent of toolIntents) {
+    const { intent, args } = toolIntent;
     
-    // Execute all identified tools
-    for (const toolIntent of toolIntents) {
-      const { intent, args } = toolIntent;
-      
-      if (intent === 'none') {
-        // No tools to execute, continue to LLM response
-        continue;
-      }
-      
-      if (intent in tools) {
-        let toolOutput: string;
-        
-        // Execute the specific tool
-        if (intent === 'get_weather' && 'location' in args) {
-          toolOutput = tools.get_weather(args as { location: string });
-        } else if (intent === 'get_stock_info' && 'ticker' in args) {
-          toolOutput = await tools.get_stock_info(args as { ticker: string });
-        } else if (intent === 'math_calculator' && 'expression' in args) {
-          const result = await tools.math_calculator.invoke(args as { expression: string });
-          toolOutput = result;
-        } else if (intent === 'web_search' && 'query' in args) {
-          const result = await tools.web_search.invoke(args as { query: string });
-          toolOutput = `Search results for "${args.query}":\n${YAML.stringify(result, { indent: 2})}`;
-        } else {
-          toolOutput = `Invalid arguments for tool: ${intent}`;
-        }
-        
-        // Add tool execution as an event
-        threadXML = await agentMemory(intent, toolOutput, threadXML);
-      }
+    if (intent === 'none') {
+      // No tools to execute, continue to LLM response
+      continue;
     }
-    return threadXML;
+    
+    if (intent in tools) {
+      let toolOutput: string;
+      
+      // Execute the specific tool
+      if (intent === 'get_weather' && 'location' in args) {
+        toolOutput = tools.get_weather(args as { location: string });
+      } else if (intent === 'get_stock_info' && 'ticker' in args) {
+        toolOutput = await tools.get_stock_info(args as { ticker: string });
+      } else if (intent === 'math_calculator' && 'expression' in args) {
+        const result = await tools.math_calculator.invoke(args as { expression: string });
+        toolOutput = result;
+      } else if (intent === 'web_search' && 'query' in args) {
+        const result = await tools.web_search.invoke(args as { query: string });
+        toolOutput = `Search results for "${args.query}":\n${YAML.stringify(result, { indent: 2})}`;
+      } else {
+        toolOutput = `Invalid arguments for tool: ${intent}`;
+      }
+      
+      // Add tool execution as an event
+      state = await agentMemory(intent, toolOutput, state);
+    }
+  }
+  return state;
 }

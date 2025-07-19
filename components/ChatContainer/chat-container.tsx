@@ -3,6 +3,11 @@
 import { useChatContext } from "@/providers/ChatProvider";
 import { useEffect } from "react";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { ThreadState, agentMemory, parseEvents, getLatestContext, convertStateToXML } from '@/lib/memory';
+import { getLLMResponse, getLLMResponseStream, agentLoop } from '@/lib/classify';
+import { ChatModels } from '@/lib/models';
+import { tools } from '@/lib/tools';
+import { YAML } from 'yaml';
 
 export function ChatContainer() {
 	const { 
@@ -82,6 +87,7 @@ export function ChatContainer() {
                 const data = JSON.parse(line.slice(6));
                 
                 if (data.type === 'memory') {
+                  // data.memory is already XML format from the server
                   setMemory(data.memory);
                 } else if (data.type === 'content') {
                   streamingResponse += data.content;
@@ -95,6 +101,7 @@ export function ChatContainer() {
                     scrollToBottom();
                   }, 50);
                 } else if (data.type === 'complete') {
+                  // data.memory is already XML format from the server
                   setMemory(data.memory);
                 } else if (data.type === 'error') {
                   setLog((prev: string[]) => [...prev.slice(0, -1), `Error: ${data.error}`]);
@@ -110,7 +117,7 @@ export function ChatContainer() {
         const data = await res.json();
         setLog((prev: string[]) => [...prev, `Agent: ${data.response}`]);
         
-        // Update memory state with the XML response
+        // Update memory state - data.memory is already XML format from the server
         if (data.memory) {
           setMemory(data.memory);
         }
