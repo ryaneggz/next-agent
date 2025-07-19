@@ -1,12 +1,20 @@
 
 export type ThreadState = {
   thread: {
+    usage: {
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+    };
+    systemMessage?: string;
     events: {
       intent: string;
       content: string;
-      type?: string;
-      status?: string;
-      done?: string;
+      metadata?: {
+        type?: string;
+        status?: string;
+        done?: string;
+      };
     }[];
   };
 };
@@ -24,19 +32,36 @@ export async function agentMemory(
 
   // Add additional attributes for tool events
   if (intent !== 'user_input' && intent !== 'llm_response') {
-    event.type = "tool";
-    event.status = "success";
-    event.done = "true";
+    event.metadata = {
+      type: "tool",
+      status: "success",
+      done: "true"
+    };
   }
 
   // Add the new event to the state
   const newState = {
     thread: {
+      usage: state.thread.usage,
+      systemMessage: state.thread.systemMessage,
       events: [...state.thread.events, event]
     }
   };
 
   return newState;
+}
+
+export function updateSystemMessage(state: ThreadState, systemMessage: string): ThreadState {
+  return {
+    thread: {
+      ...state.thread,
+      systemMessage
+    }
+  };
+}
+
+export function getSystemMessage(state: ThreadState): string {
+  return state.thread.systemMessage || 'You are a helpful AI assistant.';
 }
 
 export function parseEvents(state: ThreadState): { intent: string, content: string }[] {
@@ -59,12 +84,12 @@ export function convertStateToXML(state: ThreadState): string {
   // Convert to XML format for components that still expect it
   const events = state.thread.events.map(event => {
     const attrs = [`intent="${event.intent}"`];
-    if (event.type) attrs.push(`type="${event.type}"`);
-    if (event.status) attrs.push(`status="${event.status}"`);
-    if (event.done) attrs.push(`done="${event.done}"`);
+    if (event.metadata?.type) attrs.push(`type="${event.metadata.type}"`);
+    if (event.metadata?.status) attrs.push(`status="${event.metadata.status}"`);
+    if (event.metadata?.done) attrs.push(`done="${event.metadata.done}"`);
     
     return `<event ${attrs.join(' ')}>${event.content}</event>`;
   }).join('\n  ');
   
-  return `<thread>\n  ${events}\n</thread>`;
+  return `<thread>\n${events}\n</thread>`;
 }

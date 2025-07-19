@@ -19,18 +19,24 @@ export function ModelSelector() {
 			>
 				<option value={ChatModels.ANTHROPIC_CLAUDE_4_SONNET}>Anthropic | Claude 4 Sonnet</option>
 				<option value={ChatModels.ANTHROPIC_CLAUDE_4_OPUS}>Anthropic | Claude 4 Opus</option>
-				{/* <option value={ChatModels.GOOGLE_GEMINI_2_5_FLASH}>Gemini 2.5 Flash</option> */}
-				{/* <option value={ChatModels.GROQ_DEEPSEEK_R1_DISTILL_LLAMA_70B}>DeepSeek R1 Distill Llama 70B</option>
-				<option value={ChatModels.GROQ_LLAMA_3_2_90B_VISION}>Llama 3.2 90B Vision</option> */}
+				<option value={ChatModels.GOOGLE_GEMINI_2_0_FLASH_LITE}>Google | Gemini 2.0 Flash Lite</option>
+				<option value={ChatModels.GOOGLE_GEMINI_2_0_FLASH}>Google | Gemini 2.0 Flash</option>
+				{/* <option value={ChatModels.GOOGLE_GEMINI_2_0_PRO}>Google | Gemini 2.0 Pro</option> */}
+				<option value={ChatModels.GOOGLE_GEMINI_2_5_FLASH_LITE}>Google | Gemini 2.5 Flash Lite</option>
+				<option value={ChatModels.GOOGLE_GEMINI_2_5_FLASH}>Google | Gemini 2.5 Flash</option>
+				<option value={ChatModels.GOOGLE_GEMINI_2_5_PRO}>Google | Gemini 2.5 Pro</option>
 				<option value={ChatModels.GROQ_LLAMA_3_3_70B_VERSATILE}>Groq | Llama 3.3 70B Versatile</option>
-				{/* <option value={ChatModels.OLLAMA_LLAMA_3_2_VISION}>Llama 3.2 Vision</option>
-				<option value={ChatModels.OLLAMA_DEEPSEEK_R1_8B}>DeepSeek R1 8B</option>
-				<option value={ChatModels.OLLAMA_DEEPSEEK_R1_14B}>DeepSeek R1 14B</option> */}
+				<option value={ChatModels.OPENAI_GPT_4o}>OpenAI | GPT-4o</option>
+				<option value={ChatModels.OPENAI_GPT_4_1_NANO}>OpenAI | GPT-4.1 Nano</option>
 				<option value={ChatModels.OPENAI_GPT_4_1_MINI}>OpenAI | GPT-4.1 Mini</option>
-				<option value={ChatModels.OPENAI_GPT_4O}>OpenAI | GPT-4o</option>
+				<option value={ChatModels.OPENAI_GPT_4_5}>OpenAI | GPT-4.5</option>
 				<option value={ChatModels.OPENAI_O3}>OpenAI | o3</option>
 				<option value={ChatModels.OPENAI_O4_MINI}>OpenAI | o4 Mini</option>
-				
+				<option value={ChatModels.XAI_GROK_3_MINI_FAST}>XAI | Grok 3 Mini Fast</option>
+				<option value={ChatModels.XAI_GROK_3_MINI}>XAI | Grok 3 Mini</option>
+				<option value={ChatModels.XAI_GROK_3_FAST}>XAI | Grok 3 Fast</option>
+				<option value={ChatModels.XAI_GROK_3}>XAI | Grok 3</option>
+				<option value={ChatModels.XAI_GROK_4}>XAI | Grok 4</option>
 			</select>
 		</div>
 	);

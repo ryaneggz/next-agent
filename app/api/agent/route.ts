@@ -1,21 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getLLMResponse, getLLMResponseStream, agentLoop } from '@/lib/classify';
-import { agentMemory, ThreadState, convertStateToXML } from '@/lib/memory';
+import { agentMemory, ThreadState, convertStateToXML, getSystemMessage } from '@/lib/memory';
 
 let state: ThreadState = {
   thread: {
-    events: []
+    systemMessage: 'You are a helpful AI assistant.',
+    events: [],
+    usage: {
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0
+    }
   }
 }; // Simple in-memory store. Replace with DB or file store as needed.
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { input, systemMessage, model, stream } = body;
+    const { input, model, stream, state: clientState } = body;
 
     if (!input) {
       return NextResponse.json({ error: "Missing input" }, { status: 400 });
     }
+
+    // Use client state if provided, otherwise use server state
+    if (clientState) {
+      state = clientState;
+    }
+
+    // Get system message from thread state
+    const systemMessage = getSystemMessage(state);
 
     // Add user input as an event
     state = await agentMemory('user_input', input, state);
@@ -42,6 +56,7 @@ export async function POST(req: NextRequest) {
             // Process streaming response
             for await (const chunk of llmStream) {
               const content = chunk.content || '';
+              state.thread.usage = chunk.response_metadata?.usage;
               if (content) {
                 fullResponse += content;
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
@@ -90,11 +105,22 @@ export async function POST(req: NextRequest) {
         state: state
       });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('API Error:', error);
-    return NextResponse.json(
-      { error: "Internal server error" }, 
-      { status: 500 }
-    );
+    if (error instanceof Error) {
+      if (error.message.includes('400')) {
+        const errorMessage = error.message.split('400 ')[1];
+        const errorObject = JSON.parse(errorMessage);
+        return NextResponse.json({ 
+          error: {
+            message: `(${errorObject.error.type}) ${errorObject.error.message}`,
+            type: errorObject.error.type
+          }
+        }, { status: 400 });
+      } else {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+    }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

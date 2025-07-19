@@ -79,7 +79,32 @@ Respond with only the JSON array, no additional text.
   const response = await model.invoke(messages);
 
   const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content) ?? "[]";
-  return JSON.parse(content);
+  
+  try {
+    // Clean the response to remove any markdown formatting or extra text
+    let cleanContent = content.trim();
+    
+    // Remove markdown code blocks if present
+    if (cleanContent.startsWith('```json')) {
+      cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanContent.startsWith('```')) {
+      cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    // Extract JSON array if there's extra text
+    const jsonMatch = cleanContent.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      cleanContent = jsonMatch[0];
+    }
+    
+    return JSON.parse(cleanContent);
+  } catch (error) {
+    console.error('Failed to parse LLM response:', content);
+    console.error('Parse error:', error);
+    
+    // Return a safe fallback
+    return [{ intent: 'none', args: {} }];
+  }
 }
 
 export async function getLLMResponse(
