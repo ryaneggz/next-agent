@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { classifyIntent, getLLMResponse, getLLMResponseStream, handleToolCall } from '@/lib/classify';
-import { tools } from '@/lib/tools';
+import { getLLMResponse, getLLMResponseStream, handleToolCall } from '@/lib/classify';
 import { addEvent } from '@/lib/memory';
 
 let threadXML = ""; // Simple in-memory store. Replace with DB or file store as needed.

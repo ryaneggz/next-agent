@@ -16,6 +16,17 @@ export default function Home() {
 
           <ModelSelector />
           
+          {/* Available Tools Description */}
+          <div className="mt-3 text-center">
+            <p className="text-xs text-gray-500 mb-1">Available Tools:</p>
+            <div className="flex flex-wrap justify-center gap-2 text-xs">
+              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Weather</span>
+              <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full">Web Search</span>
+              <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full">Stock Info</span>
+              <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full">Math</span>
+            </div>
+          </div>
+          
           {/* System Message Editor Icon */}
           <SettingButton />
         </div>

@@ -3,19 +3,35 @@ import { tool } from "@langchain/core/tools";
 import { TavilySearch } from "@langchain/tavily";
 import { z } from "zod";
 
-const multiply = tool(
-  ({ a, b }: { a: number; b: number }): number => {
-    /**
-     * Multiply two numbers.
-     */
-    return a * b;
+const math_calculator = tool(
+  ({ expression }: { expression: string }): string => {
+    try {
+      // Safe evaluation of basic math expressions
+      // Only allow numbers, operators, parentheses, and basic math functions
+      const sanitized = expression.replace(/[^0-9+\-*/().\s]/g, '');
+      
+      // Basic validation
+      if (!sanitized || sanitized.trim() === '') {
+        return 'Error: Invalid math expression';
+      }
+      
+      // Use Function constructor for safe evaluation (limited scope)
+      const result = new Function('return ' + sanitized)();
+      
+      if (typeof result !== 'number' || !isFinite(result)) {
+        return 'Error: Result is not a valid number';
+      }
+      
+      return `${expression} = ${result}`;
+    } catch (error) {
+      return `Error: Invalid math expression - ${expression}`;
+    }
   },
   {
-    name: "multiply",
-    description: "Multiply two numbers",
+    name: "math_calculator",
+    description: "Calculate mathematical expressions including addition, subtraction, multiplication, division, and parentheses",
     schema: z.object({
-      a: z.number(),
-      b: z.number(),
+      expression: z.string().describe("Mathematical expression to evaluate (e.g., '2 + 3 * 4', '(10 - 5) / 2')"),
     }),
   }
 );
@@ -38,7 +54,7 @@ export const tools = {
     return `The weather in ${location} is sunny and 88°F.`; // Stubbed
   },
   web_search,
-  multiply,
+  math_calculator,
   
   get_stock_info: async ({ ticker }: { ticker: string }) => {
     try {

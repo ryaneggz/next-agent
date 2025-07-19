@@ -29,9 +29,9 @@ interface GetStockInfo {
   args: { ticker: string };
 }
 
-interface Multiply {
-  intent: "multiply";
-  args: { a: number; b: number };
+interface MathCalculator {
+  intent: "math_calculator";
+  args: { expression: string };
 }
 
 interface WebSearch {
@@ -44,7 +44,7 @@ interface NoTool {
   args: Record<string, never>;
 }
 
-type ToolIntent = GetWeather | GetStockInfo | Multiply | WebSearch | NoTool;
+type ToolIntent = GetWeather | GetStockInfo | MathCalculator | WebSearch | NoTool;
 
 export async function classifyIntent(input: string, modelName?: string): Promise<ToolIntent[]> {
   const model = await getModel(modelName);
@@ -58,14 +58,14 @@ Analyze the input and identify ALL tool requests present. Return a JSON array of
 For web search requests, use this format: { "intent": "web_search", "args": { "query": "<search query>" } }
 For weather requests, use this format: { "intent": "get_weather", "args": { "location": "<city>" } }
 For stock information requests, use this format: { "intent": "get_stock_info", "args": { "ticker": "<ticker>" } }
-For multiplication requests, use this format: { "intent": "multiply", "args": { "a": <number>, "b": <number> } }
+For math calculations, use this format: { "intent": "math_calculator", "args": { "expression": "<math expression>" } }
 If no tools are needed, return: [{ "intent": "none", "args": {} }]
 
 Examples:
 - "search for the best restaurants in dallas" → [{ "intent": "web_search", "args": { "query": "the best restaurants in dallas" } }]
 - "weather in dallas" → [{ "intent": "get_weather", "args": { "location": "dallas" } }]
 - "price of tsla" → [{ "intent": "get_stock_info", "args": { "ticker": "tsla" } }]
-- "multiply 5 and 3" → [{ "intent": "multiply", "args": { "a": 5, "b": 3 } }]
+- "calculate 5 * 3 + 2" → [{ "intent": "math_calculator", "args": { "expression": "5 * 3 + 2" } }]
 - "weather in dallas, price of tsla" → [{ "intent": "get_weather", "args": { "location": "dallas" } }, { "intent": "get_stock_info", "args": { "ticker": "tsla" } }]
 - "how are you today?" → [{ "intent": "none", "args": {} }]
 
@@ -155,9 +155,9 @@ export async function handleToolCall(input: string, model: string, threadXML: st
           toolOutput = tools.get_weather(args as { location: string });
         } else if (intent === 'get_stock_info' && 'ticker' in args) {
           toolOutput = await tools.get_stock_info(args as { ticker: string });
-        } else if (intent === 'multiply' && 'a' in args && 'b' in args) {
-          const result = await tools.multiply.invoke(args as { a: number; b: number });
-          toolOutput = `${args.a} × ${args.b} = ${result}`;
+        } else if (intent === 'math_calculator' && 'expression' in args) {
+          const result = await tools.math_calculator.invoke(args as { expression: string });
+          toolOutput = result;
         } else if (intent === 'web_search' && 'query' in args) {
           const result = await tools.web_search.invoke(args as { query: string });
           toolOutput = `Search results for "${args.query}":\n${YAML.stringify(result, { indent: 2})}`;

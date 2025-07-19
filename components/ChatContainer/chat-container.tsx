@@ -135,7 +135,7 @@ export function ChatContainer() {
     if (savedSystemMessage) {
       setSystemMessage(savedSystemMessage);
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Save system message to localStorage whenever it changes
   useEffect(() => {
@@ -154,14 +154,14 @@ export function ChatContainer() {
     if (inputRef.current) {
       inputRef.current.focus();
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Focus input after AI response completes
   useEffect(() => {
     if (!isLoading && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [isLoading]);
+  }, [isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	return (
 		<div className="bg-white rounded-2xl shadow-xl overflow-hidden">
