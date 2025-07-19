@@ -17,7 +17,7 @@ hljs.registerLanguage('json', json);
 type ViewMode = 'md' | 'xml' | 'json';
 
 function CodeViewer() {
-	const { state } = useChatContext();
+	const { state, useTotalTokensEffect, totalTokens } = useChatContext();
 	const codeRef = useRef<HTMLElement>(null);
 	const [viewMode, setViewMode] = useState<ViewMode>('md');
 
@@ -26,6 +26,8 @@ function CodeViewer() {
 			hljs.highlightElement(codeRef.current);
 		}
 	}, [state, viewMode]);
+
+	useTotalTokensEffect();
 
 	const renderContent = () => {
 		switch (viewMode) {
@@ -93,6 +95,9 @@ function CodeViewer() {
 				<h3 className="text-lg font-semibold flex items-center">
 					<span className="mr-2">🧠</span>
 					Context Window | Factor 03
+					<span className="ml-4 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+						{totalTokens} tokens
+					</span>
 				</h3>
 				<div className="flex items-center space-x-2">
 					<select

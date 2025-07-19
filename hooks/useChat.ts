@@ -10,10 +10,16 @@ export default function useChat() {
 	const [log, setLog] = useState<string[]>([]);
 	const [input, setInput] = useState<string>('');
 	const [model, setModel] = useState<ChatModels>('');
+	const [totalTokens, setTotalTokens] = useState(0);
   const [state, setState] = useState<ThreadState>({
     thread: {
       systemMessage: 'You are a helpful AI assistant.',
-      events: []
+      events: [],
+      usage: {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0
+      }
     }
   });
 
@@ -36,8 +42,16 @@ export default function useChat() {
 			}
 		}, []);
 	}
+
+	const useTotalTokensEffect = () => {
+		useEffect(() => {
+			setTotalTokens(totalTokens + (state.thread.usage.total_tokens));
+		}, [state.thread.usage.total_tokens]);
+	}
   
 	return {
+		totalTokens,
+		useTotalTokensEffect,
 		chatContainerRef,
 		inputRef,
 		isLoading,
