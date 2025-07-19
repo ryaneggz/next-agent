@@ -10,9 +10,11 @@ export type ThreadState = {
     events: {
       intent: string;
       content: string;
-      type?: string;
-      status?: string;
-      done?: string;
+      metadata?: {
+        type?: string;
+        status?: string;
+        done?: string;
+      };
     }[];
   };
 };
@@ -30,9 +32,11 @@ export async function agentMemory(
 
   // Add additional attributes for tool events
   if (intent !== 'user_input' && intent !== 'llm_response') {
-    event.type = "tool";
-    event.status = "success";
-    event.done = "true";
+    event.metadata = {
+      type: "tool",
+      status: "success",
+      done: "true"
+    };
   }
 
   // Add the new event to the state
@@ -80,9 +84,9 @@ export function convertStateToXML(state: ThreadState): string {
   // Convert to XML format for components that still expect it
   const events = state.thread.events.map(event => {
     const attrs = [`intent="${event.intent}"`];
-    if (event.type) attrs.push(`type="${event.type}"`);
-    if (event.status) attrs.push(`status="${event.status}"`);
-    if (event.done) attrs.push(`done="${event.done}"`);
+    if (event.metadata?.type) attrs.push(`type="${event.metadata.type}"`);
+    if (event.metadata?.status) attrs.push(`status="${event.metadata.status}"`);
+    if (event.metadata?.done) attrs.push(`done="${event.metadata.done}"`);
     
     return `<event ${attrs.join(' ')}>${event.content}</event>`;
   }).join('\n  ');
