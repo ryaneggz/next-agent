@@ -2,6 +2,7 @@
 
 import { useChatContext } from "@/providers/ChatProvider";
 import { useEffect } from "react";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 export function ChatContainer() {
 	const { 
@@ -200,7 +201,13 @@ export function ChatContainer() {
 												</span>
 											</div>
 										)}
-										<div className="text-sm leading-relaxed whitespace-pre-wrap">{content}</div>
+										<div className="text-sm leading-relaxed">
+											{isUser || isError ? (
+												<div className="whitespace-pre-wrap">{content}</div>
+											) : (
+												<MarkdownRenderer content={content} />
+											)}
+										</div>
 									</div>
 								</div>
 							);
