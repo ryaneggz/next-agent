@@ -22,9 +22,13 @@ export class ChatModels {
 	public static readonly GOOGLE_GEMINI_2_5_PRO = "google-vertexai:gemini-2.5-pro";
 	// public static readonly GROQ_DEEPSEEK_R1_DISTILL_LLAMA_70B = "groq:deepseek-r1-distill-llama-70b"; # Issues parsing route.ts (21:24)
 	public static readonly GROQ_LLAMA_3_3_70B_VERSATILE = "groq:llama-3.3-70b-versatile";
-	public static readonly OLLAMA_LLAMA_3_2_VISION = "ollama:llama3.2-vision";
-	public static readonly OLLAMA_DEEPSEEK_R1_8B = "ollama:deepseek-r1:8b";
+	public static readonly OLLAMA_DEEPSEEK_R1 = "ollama:deepseek-r1";
 	public static readonly OLLAMA_DEEPSEEK_R1_14B = "ollama:deepseek-r1:14b";
+	public static readonly OLLAMA_LLAMA_3_1 = "ollama:llama3.1";
+	public static readonly OLLAMA_LLAMA_3_2_VISION = "ollama:llama3.2-vision";
+	public static readonly OLLAMA_GEMMA3 = "ollama:gemma3";
+	public static readonly OLLAMA_CODELLAMA = "ollama:codellama";
+	public static readonly OLLAMA_QWEN3 = "ollama:qwen3";
 }
 
 export default ChatModels;

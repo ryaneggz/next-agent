@@ -15,6 +15,7 @@
     "@langchain/google-vertexai": "^0.2.15",
     "@langchain/google-vertexai-web": "^0.2.15",
     "@langchain/groq": "^0.2.3",
+    "@langchain/ollama": "^0.2.3",
     "@langchain/openai": "^0.6.2",
     "@langchain/tavily": "^0.1.4",
     "@langchain/xai": "^0.1.0",

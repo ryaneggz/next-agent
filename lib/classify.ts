@@ -4,6 +4,9 @@ import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 import ChatModels from "./types/llm";
 import { tools } from "./tools";
 import YAML from 'yaml'
+import { VertexAI } from "@langchain/google-vertexai-web";
+
+new VertexAI({authOptions: JSON.parse(process.env.GOOGLE_VERTEX_AI_WEB_CREDENTIALS || '{}')});
 
 let model: BaseChatModel | null = null;
 
