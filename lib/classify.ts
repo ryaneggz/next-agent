@@ -11,7 +11,7 @@ new VertexAI({authOptions: JSON.parse(process.env.GOOGLE_VERTEX_AI_WEB_CREDENTIA
 let model: BaseChatModel | null = null;
 
 async function getModel(modelName?: ChatModels) {
-  const selectedModel = modelName || ChatModels.OPENAI_GPT_4_1_MINI;
+  const selectedModel = modelName || ChatModels.OPENAI_GPT_4_1_NANO;
   
   // Always create a new model instance if a specific model is requested
   if (modelName || !model) {
@@ -113,7 +113,7 @@ Respond with only the JSON array, no additional text.
 export async function getLLMResponse(
   ctxWindow: string,
   systemMessage: string,
-  modelName: ChatModels = ChatModels.OPENAI_GPT_4_1_MINI,
+  modelName: ChatModels = ChatModels.OPENAI_GPT_4_1_NANO,
 ): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
   const messages = [
     { role: "system", content: systemMessage },
@@ -129,7 +129,7 @@ export async function getLLMResponse(
 export async function getLLMResponseStream(
   ctxWindow: string,
   systemMessage: string,
-  modelName: ChatModels = ChatModels.OPENAI_GPT_4_1_MINI,
+  modelName: ChatModels = ChatModels.OPENAI_GPT_4_1_NANO,
 ) {
   const messages = [
     { role: "system", content: systemMessage },
@@ -145,7 +145,7 @@ export async function getLLMResponseStream(
 export async function agentLoop(
   query: string, 
   state: ThreadState,
-  model: ChatModels = ChatModels.OPENAI_GPT_4_1_MINI,
+  model: ChatModels = ChatModels.OPENAI_GPT_4_1_NANO,
 ) {
   // Tool execution - classify all tools from the input at once
   const toolIntents = await classifyIntent(query, model.toString());
