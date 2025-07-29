@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { ChatModels } from '@/lib/types/llm';
 import Config from '@/lib/config';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get all static properties from ChatModels class
     const allModels = Object.getOwnPropertyNames(ChatModels)
       .filter(name => name !== 'length' && name !== 'name' && name !== 'prototype')
-      .map(name => (ChatModels as any)[name])
+      .map(name => (ChatModels as Record<string, unknown>)[name])
       .filter(value => typeof value === 'string')
       .sort();
 
