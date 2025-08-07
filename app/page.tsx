@@ -1,13 +1,12 @@
+'use client';
+
+import { useState } from 'react';
 import ChatContainer from '@/components/ChatContainer';
 import CodeViewer from '@/components/CodeViewer';
 import ModelSelector from '@/components/ModelSelector/model-selector';
 import SettingButton from '@/components/SettingButton';
 import SystemMessageEditor from '@/components/SystemMessageEditor';
 import { getToolDescription } from '@/lib/tools';
-
-'use client';
-
-import { useState } from 'react';
 
 export default function Home() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -120,5 +119,6 @@ export default function Home() {
     </main>
   );
 }
+
 
 
