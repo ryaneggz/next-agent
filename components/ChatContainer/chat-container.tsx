@@ -5,6 +5,29 @@ import { useEffect, useState } from "react";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import ToolPlanApproval from "@/components/ToolPlanApproval";
 
+// Tool intent types (matching classify.ts)
+interface WeatherIntent {
+  intent: 'get_weather';
+  args: { location: string };
+}
+
+interface StockIntent {
+  intent: 'get_stock_info';
+  args: { ticker: string };
+}
+
+interface WebSearchIntent {
+  intent: 'web_search';
+  args: { query: string };
+}
+
+interface MathIntent {
+  intent: 'math_calculator';
+  args: { expression: string };
+}
+
+type ToolIntent = WeatherIntent | StockIntent | WebSearchIntent | MathIntent;
+
 export function ChatContainer() {
 	const { 
 		chatContainerRef, 
@@ -22,6 +45,11 @@ export function ChatContainer() {
 		useInitModelEffect,
 		state,
 	} = useChatContext();
+
+	// New state management for tool approval workflow
+	const [pendingToolPlan, setPendingToolPlan] = useState<ToolIntent[] | null>(null);
+	const [showApproval, setShowApproval] = useState(false);
+	const [pendingUserInput, setPendingUserInput] = useState<string>('');
 
 	// Scroll functions
   const scrollToShowLatestMessage = () => {
@@ -268,3 +296,4 @@ export function ChatContainer() {
 }
 
 export default ChatContainer;
+
