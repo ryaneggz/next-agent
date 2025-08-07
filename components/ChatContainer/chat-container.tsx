@@ -1,8 +1,9 @@
 "use client";
 
 import { useChatContext } from "@/providers/ChatProvider";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import ToolPlanApproval from "@/components/ToolPlanApproval";
 
 export function ChatContainer() {
 	const { 
