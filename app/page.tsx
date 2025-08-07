@@ -3,6 +3,7 @@ import CodeViewer from '@/components/CodeViewer';
 import ModelSelector from '@/components/ModelSelector/model-selector';
 import SettingButton from '@/components/SettingButton';
 import SystemMessageEditor from '@/components/SystemMessageEditor';
+import { getToolDescription } from '@/lib/tools';
 
 export default function Home() {
 
@@ -49,3 +50,4 @@ export default function Home() {
     </main>
   );
 }
+
