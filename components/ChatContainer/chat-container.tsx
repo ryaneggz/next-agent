@@ -83,10 +83,31 @@ export function ChatContainer() {
     }, 100);
 
     try {
+      // Step 1: Send initial request with approveTools: false to get tool plan
       const res = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: userMessage, model, stream: true, state }),
+        body: JSON.stringify({ input: userMessage, model, stream: false, state, approveTools: false }),
+      });
+
+      const data = await res.json();
+
+      // Check if we received a tool plan for approval
+      if (data.type === 'tool_plan' && data.toolIntents && data.toolIntents.length > 0) {
+        // Show tool plan approval UI
+        setPendingToolPlan(data.toolIntents);
+        setPendingUserInput(userMessage);
+        setShowApproval(true);
+        setIsLoading(false);
+        setState(data.state);
+        return;
+      }
+
+      // If no tools needed, proceed with streaming response
+      const streamRes = await fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: userMessage, model, stream: true, state: data.state || state }),
       });
 
       if (res.headers.get('content-type')?.includes('text/event-stream')) {
@@ -296,4 +317,5 @@ export function ChatContainer() {
 }
 
 export default ChatContainer;
+
 
