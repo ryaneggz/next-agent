@@ -17,7 +17,7 @@ let state: ThreadState = {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { input, model, stream, state: clientState } = body;
+    const { input, model, stream, state: clientState, approveTools, approvedTools } = body;
 
     if (!input) {
       return NextResponse.json({ error: "Missing input" }, { status: 400 });
@@ -33,7 +33,35 @@ export async function POST(req: NextRequest) {
 
     // Add user input as an event
     state = await agentMemory('user_input', input, state);
-    state = await agentLoop(input, state, model);
+
+    // Handle tool approval workflow
+    if (approveTools === false) {
+      // Step 1: Classify intents and return them for approval
+      const toolIntents = await classifyIntent(input, model?.toString());
+      
+      // Filter out 'none' intents
+      const validToolIntents = toolIntents.filter(intent => intent.intent !== 'none');
+      
+      if (validToolIntents.length === 0) {
+        // No tools needed, proceed with normal flow
+        state = await agentLoop(input, state, model);
+        const prompt = convertStateToXML(state) + "\n\nResponse:";
+      } else {
+        // Return tool plan for approval
+        return NextResponse.json({
+          type: 'tool_plan',
+          toolIntents: validToolIntents,
+          state: state
+        });
+      }
+    } else if (approveTools === true && approvedTools) {
+      // Step 2: Execute only approved tools
+      state = await agentLoop(input, state, model, approvedTools);
+    } else {
+      // Default behavior: execute tools automatically (backward compatibility)
+      state = await agentLoop(input, state, model);
+    }
+    
     const prompt = convertStateToXML(state) + "\n\nResponse:";
     
     // Check if streaming is requested
@@ -124,4 +152,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
 
