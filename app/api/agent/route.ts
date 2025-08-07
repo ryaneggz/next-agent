@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLLMResponse, getLLMResponseStream, agentLoop } from '@/lib/classify';
+import { getLLMResponse, getLLMResponseStream, agentLoop, classifyIntent } from '@/lib/classify';
 import { agentMemory, ThreadState, convertStateToXML, getSystemMessage } from '@/lib/memory';
 
 let state: ThreadState = {
@@ -124,3 +124,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
