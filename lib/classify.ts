@@ -6,7 +6,14 @@ import { tools } from "./tools";
 import YAML from 'yaml'
 import { VertexAI } from "@langchain/google-vertexai-web";
 
-new VertexAI({authOptions: JSON.parse(process.env.GOOGLE_VERTEX_AI_WEB_CREDENTIALS || '{}')});
+// Initialize VertexAI conditionally to avoid build errors when credentials are not available
+try {
+  if (process.env.GOOGLE_VERTEX_AI_WEB_CREDENTIALS) {
+    new VertexAI({authOptions: JSON.parse(process.env.GOOGLE_VERTEX_AI_WEB_CREDENTIALS || '{}')});
+  }
+} catch (error) {
+  console.warn('Google Vertex AI not available:', error);
+}
 
 let model: BaseChatModel | null = null;
 
@@ -195,4 +202,5 @@ export async function agentLoop(
   }
   return state;
 }
+
 
