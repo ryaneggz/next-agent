@@ -6,7 +6,14 @@ import { tools } from "./tools";
 import YAML from 'yaml'
 import { VertexAI } from "@langchain/google-vertexai-web";
 
-new VertexAI({authOptions: JSON.parse(process.env.GOOGLE_VERTEX_AI_WEB_CREDENTIALS || '{}')});
+// Initialize VertexAI conditionally to avoid build errors when credentials are not available
+try {
+  if (process.env.GOOGLE_VERTEX_AI_WEB_CREDENTIALS) {
+    new VertexAI({authOptions: JSON.parse(process.env.GOOGLE_VERTEX_AI_WEB_CREDENTIALS || '{}')});
+  }
+} catch (error) {
+  console.warn('Google Vertex AI not available:', error);
+}
 
 let model: BaseChatModel | null = null;
 
@@ -142,20 +149,17 @@ export async function getLLMResponseStream(
   return response;
 }
 
-export async function agentLoop(
-  query: string, 
-  state: ThreadState,
-  model: ChatModels = ChatModels.OPENAI_GPT_4_1_NANO,
-) {
-  // Tool execution - classify all tools from the input at once
-  const toolIntents = await classifyIntent(query, model.toString());
-  
-  // Execute all identified tools
-  for (const toolIntent of toolIntents) {
+// New function to execute approved tools only
+export async function executeApprovedTools(
+  approvedTools: ToolIntent[],
+  state: ThreadState
+): Promise<ThreadState> {
+  // Execute all approved tools
+  for (const toolIntent of approvedTools) {
     const { intent, args } = toolIntent;
     
     if (intent === 'none') {
-      // No tools to execute, continue to LLM response
+      // No tools to execute, continue
       continue;
     }
     
@@ -171,8 +175,12 @@ export async function agentLoop(
         const result = await tools.math_calculator.invoke(args as { expression: string });
         toolOutput = result;
       } else if (intent === 'web_search' && 'query' in args) {
-        const result = await tools.web_search.invoke(args as { query: string });
-        toolOutput = `Search results for "${args.query}":\n${YAML.stringify(result, { indent: 2})}`;
+        if (tools.web_search) {
+          const result = await tools.web_search.invoke(args as { query: string });
+          toolOutput = `Search results for "${args.query}":\n${YAML.stringify(result, { indent: 2})}`;
+        } else {
+          toolOutput = `Web search is not available. Please configure TAVILY_API_KEY environment variable.`;
+        }
       } else {
         toolOutput = `Invalid arguments for tool: ${intent}`;
       }
@@ -183,3 +191,24 @@ export async function agentLoop(
   }
   return state;
 }
+
+export async function agentLoop(
+  query: string, 
+  state: ThreadState,
+  model: ChatModels = ChatModels.OPENAI_GPT_4_1_NANO,
+  approvedTools?: ToolIntent[]
+) {
+  if (approvedTools) {
+    // Execute pre-approved tools using the dedicated function
+    state = await executeApprovedTools(approvedTools, state);
+  } else {
+    // Classify intents and execute all tools (for backward compatibility)
+    const toolIntents = await classifyIntent(query, model.toString());
+    state = await executeApprovedTools(toolIntents, state);
+  }
+  
+  return state;
+}
+
+
+

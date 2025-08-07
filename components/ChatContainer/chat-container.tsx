@@ -1,8 +1,32 @@
 "use client";
 
 import { useChatContext } from "@/providers/ChatProvider";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import ToolPlanApproval from "@/components/ToolPlanApproval";
+
+// Tool intent types (matching classify.ts)
+interface WeatherIntent {
+  intent: 'get_weather';
+  args: { location: string };
+}
+
+interface StockIntent {
+  intent: 'get_stock_info';
+  args: { ticker: string };
+}
+
+interface WebSearchIntent {
+  intent: 'web_search';
+  args: { query: string };
+}
+
+interface MathIntent {
+  intent: 'math_calculator';
+  args: { expression: string };
+}
+
+type ToolIntent = WeatherIntent | StockIntent | WebSearchIntent | MathIntent;
 
 export function ChatContainer() {
 	const { 
@@ -21,6 +45,11 @@ export function ChatContainer() {
 		useInitModelEffect,
 		state,
 	} = useChatContext();
+
+	// New state management for tool approval workflow
+	const [pendingToolPlan, setPendingToolPlan] = useState<ToolIntent[] | null>(null);
+	const [showApproval, setShowApproval] = useState(false);
+	const [pendingUserInput, setPendingUserInput] = useState<string>('');
 
 	// Scroll functions
   const scrollToShowLatestMessage = () => {
@@ -54,15 +83,36 @@ export function ChatContainer() {
     }, 100);
 
     try {
+      // Step 1: Send initial request with approveTools: false to get tool plan
       const res = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: userMessage, model, stream: true, state }),
+        body: JSON.stringify({ input: userMessage, model, stream: false, state, approveTools: false }),
       });
 
-      if (res.headers.get('content-type')?.includes('text/event-stream')) {
+      const data = await res.json();
+
+      // Check if we received a tool plan for approval
+      if (data.type === 'tool_plan' && data.toolIntents && data.toolIntents.length > 0) {
+        // Show tool plan approval UI
+        setPendingToolPlan(data.toolIntents);
+        setPendingUserInput(userMessage);
+        setShowApproval(true);
+        setIsLoading(false);
+        setState(data.state);
+        return;
+      }
+
+      // If no tools needed, proceed with streaming response
+      const streamRes = await fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: userMessage, model, stream: true, state: data.state || state }),
+      });
+
+      if (streamRes.headers.get('content-type')?.includes('text/event-stream')) {
         // Handle streaming response
-        const reader = res.body?.getReader();
+        const reader = streamRes.body?.getReader();
         const decoder = new TextDecoder();
         let streamingResponse = '';
         
@@ -133,6 +183,106 @@ export function ChatContainer() {
     }
   };
 
+  // Handle tool approval
+  const handleToolApproval = async (approvedTools: ToolIntent[]) => {
+    setShowApproval(false);
+    setIsLoading(true);
+
+    try {
+      // Step 2: Execute approved tools with streaming response
+      const res = await fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          input: pendingUserInput, 
+          model, 
+          stream: true, 
+          state, 
+          approveTools: true, 
+          approvedTools 
+        }),
+      });
+
+      if (res.headers.get('content-type')?.includes('text/event-stream')) {
+        // Handle streaming response
+        const reader = res.body?.getReader();
+        const decoder = new TextDecoder();
+        let streamingResponse = '';
+        
+        // Add initial streaming message
+        setLog((prev: string[]) => [...prev, `Agent: `]);
+        
+        while (reader) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                if (data.type === 'memory') {
+                  setState(data.state);
+                } else if (data.type === 'content') {
+                  streamingResponse += data.content;
+                  setLog((prev: string[]) => {
+                    const newLog = [...prev];
+                    newLog[newLog.length - 1] = `Agent: ${streamingResponse}`;
+                    return newLog;
+                  });
+                  
+                  // Auto-scroll during streaming
+                  setTimeout(() => {
+                    scrollToBottom();
+                  }, 50);
+                } else if (data.type === 'complete') {
+                  setState(data.state);
+                  
+                  // Focus input after completion
+                  setTimeout(() => {
+                    if (inputRef.current) {
+                      inputRef.current.focus();
+                    }
+                  }, 100);
+                } else if (data.type === 'error') {
+                  setLog((prev: string[]) => [...prev, `Error: ${data.error}`]);
+                }
+              } catch (e) {
+                console.error('Error parsing streaming data:', e);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Tool execution error:', error);
+      setLog((prev: string[]) => [...prev, `Error: Failed to execute approved tools`]);
+    } finally {
+      setIsLoading(false);
+      setPendingToolPlan(null);
+      setPendingUserInput('');
+    }
+  };
+
+  // Handle tool rejection
+  const handleToolRejection = () => {
+    setShowApproval(false);
+    setIsLoading(false);
+    setPendingToolPlan(null);
+    setPendingUserInput('');
+    setLog((prev: string[]) => [...prev, `Agent: Tool execution was cancelled by user.`]);
+    
+    // Focus input after rejection
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
+  };
+
 	// Load system message from localStorage on component mount
   useEffect(() => {
     const savedSystemMessage = localStorage.getItem('systemMessage');
@@ -178,6 +328,15 @@ export function ChatContainer() {
 					</div>
 				) : (
 					<div className="space-y-4">
+						{/* Tool Plan Approval Component */}
+						{showApproval && pendingToolPlan && (
+							<ToolPlanApproval
+								toolIntents={pendingToolPlan}
+								onApprove={handleToolApproval}
+								onReject={handleToolRejection}
+							/>
+						)}
+						
 						{log.map((line: string, i: number) => {
 							const isUser = line.startsWith('You:');
 							const isError = line.startsWith('Error:');
@@ -267,3 +426,9 @@ export function ChatContainer() {
 }
 
 export default ChatContainer;
+
+
+
+
+
+

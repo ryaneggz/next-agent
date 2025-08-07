@@ -7,7 +7,7 @@ export async function GET() {
     // Get all static properties from ChatModels class
     const allModels = Object.getOwnPropertyNames(ChatModels)
       .filter(name => name !== 'length' && name !== 'name' && name !== 'prototype')
-      .map(name => (ChatModels as Record<string, unknown>)[name])
+      .map(name => (ChatModels as unknown as Record<string, unknown>)[name])
       .filter(value => typeof value === 'string')
       .sort();
 
