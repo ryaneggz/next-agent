@@ -112,7 +112,7 @@ export function ChatContainer() {
 
       if (streamRes.headers.get('content-type')?.includes('text/event-stream')) {
         // Handle streaming response
-        const reader = res.body?.getReader();
+        const reader = streamRes.body?.getReader();
         const decoder = new TextDecoder();
         let streamingResponse = '';
         
@@ -317,6 +317,7 @@ export function ChatContainer() {
 }
 
 export default ChatContainer;
+
 
 
 
