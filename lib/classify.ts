@@ -149,28 +149,17 @@ export async function getLLMResponseStream(
   return response;
 }
 
-export async function agentLoop(
-  query: string, 
-  state: ThreadState,
-  model: ChatModels = ChatModels.OPENAI_GPT_4_1_NANO,
-  approvedTools?: ToolIntent[]
-) {
-  let toolIntents: ToolIntent[];
-  
-  if (approvedTools) {
-    // Use pre-approved tools instead of classifying again
-    toolIntents = approvedTools;
-  } else {
-    // Tool execution - classify all tools from the input at once
-    toolIntents = await classifyIntent(query, model.toString());
-  }
-  
-  // Execute all identified tools
-  for (const toolIntent of toolIntents) {
+// New function to execute approved tools only
+export async function executeApprovedTools(
+  approvedTools: ToolIntent[],
+  state: ThreadState
+): Promise<ThreadState> {
+  // Execute all approved tools
+  for (const toolIntent of approvedTools) {
     const { intent, args } = toolIntent;
     
     if (intent === 'none') {
-      // No tools to execute, continue to LLM response
+      // No tools to execute, continue
       continue;
     }
     
@@ -202,5 +191,24 @@ export async function agentLoop(
   }
   return state;
 }
+
+export async function agentLoop(
+  query: string, 
+  state: ThreadState,
+  model: ChatModels = ChatModels.OPENAI_GPT_4_1_NANO,
+  approvedTools?: ToolIntent[]
+) {
+  if (approvedTools) {
+    // Execute pre-approved tools using the dedicated function
+    state = await executeApprovedTools(approvedTools, state);
+  } else {
+    // Classify intents and execute all tools (for backward compatibility)
+    const toolIntents = await classifyIntent(query, model.toString());
+    state = await executeApprovedTools(toolIntents, state);
+  }
+  
+  return state;
+}
+
 
 
