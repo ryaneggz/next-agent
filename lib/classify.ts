@@ -146,9 +146,17 @@ export async function agentLoop(
   query: string, 
   state: ThreadState,
   model: ChatModels = ChatModels.OPENAI_GPT_4_1_NANO,
+  approvedTools?: ToolIntent[]
 ) {
-  // Tool execution - classify all tools from the input at once
-  const toolIntents = await classifyIntent(query, model.toString());
+  let toolIntents: ToolIntent[];
+  
+  if (approvedTools) {
+    // Use pre-approved tools instead of classifying again
+    toolIntents = approvedTools;
+  } else {
+    // Tool execution - classify all tools from the input at once
+    toolIntents = await classifyIntent(query, model.toString());
+  }
   
   // Execute all identified tools
   for (const toolIntent of toolIntents) {
