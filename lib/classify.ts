@@ -179,8 +179,12 @@ export async function agentLoop(
         const result = await tools.math_calculator.invoke(args as { expression: string });
         toolOutput = result;
       } else if (intent === 'web_search' && 'query' in args) {
-        const result = await tools.web_search.invoke(args as { query: string });
-        toolOutput = `Search results for "${args.query}":\n${YAML.stringify(result, { indent: 2})}`;
+        if (tools.web_search) {
+          const result = await tools.web_search.invoke(args as { query: string });
+          toolOutput = `Search results for "${args.query}":\n${YAML.stringify(result, { indent: 2})}`;
+        } else {
+          toolOutput = `Web search is not available. Please configure TAVILY_API_KEY environment variable.`;
+        }
       } else {
         toolOutput = `Invalid arguments for tool: ${intent}`;
       }
@@ -191,3 +195,4 @@ export async function agentLoop(
   }
   return state;
 }
+
