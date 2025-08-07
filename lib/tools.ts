@@ -36,18 +36,26 @@ const math_calculator = tool(
   }
 );
 
-const web_search = new TavilySearch({
-  maxResults: 10,
-  topic: "general",
-  // includeAnswer: false,
-  // includeRawContent: false,
-  // includeImages: false,
-  // includeImageDescriptions: false,
-  // searchDepth: "basic",
-  // timeRange: "day",
-  // includeDomains: [],
-  // excludeDomains: [],
-});
+// Initialize web search conditionally to avoid build errors when API key is not available
+let web_search: TavilySearch | null = null;
+try {
+  if (process.env.TAVILY_API_KEY) {
+    web_search = new TavilySearch({
+      maxResults: 10,
+      topic: "general",
+      // includeAnswer: false,
+      // includeRawContent: false,
+      // includeImages: false,
+      // includeImageDescriptions: false,
+      // searchDepth: "basic",
+      // timeRange: "day",
+      // includeDomains: [],
+      // excludeDomains: [],
+    });
+  }
+} catch (error) {
+  console.warn('Tavily web search not available:', error);
+}
 
 export const tools = {
   get_weather: ({ location }: { location: string }) => {
@@ -84,3 +92,4 @@ export const tools = {
     }
   }
 };
+
