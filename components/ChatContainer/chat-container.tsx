@@ -183,6 +183,106 @@ export function ChatContainer() {
     }
   };
 
+  // Handle tool approval
+  const handleToolApproval = async (approvedTools: ToolIntent[]) => {
+    setShowApproval(false);
+    setIsLoading(true);
+
+    try {
+      // Step 2: Execute approved tools with streaming response
+      const res = await fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          input: pendingUserInput, 
+          model, 
+          stream: true, 
+          state, 
+          approveTools: true, 
+          approvedTools 
+        }),
+      });
+
+      if (res.headers.get('content-type')?.includes('text/event-stream')) {
+        // Handle streaming response
+        const reader = res.body?.getReader();
+        const decoder = new TextDecoder();
+        let streamingResponse = '';
+        
+        // Add initial streaming message
+        setLog((prev: string[]) => [...prev, `Agent: `]);
+        
+        while (reader) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                if (data.type === 'memory') {
+                  setState(data.state);
+                } else if (data.type === 'content') {
+                  streamingResponse += data.content;
+                  setLog((prev: string[]) => {
+                    const newLog = [...prev];
+                    newLog[newLog.length - 1] = `Agent: ${streamingResponse}`;
+                    return newLog;
+                  });
+                  
+                  // Auto-scroll during streaming
+                  setTimeout(() => {
+                    scrollToBottom();
+                  }, 50);
+                } else if (data.type === 'complete') {
+                  setState(data.state);
+                  
+                  // Focus input after completion
+                  setTimeout(() => {
+                    if (inputRef.current) {
+                      inputRef.current.focus();
+                    }
+                  }, 100);
+                } else if (data.type === 'error') {
+                  setLog((prev: string[]) => [...prev, `Error: ${data.error}`]);
+                }
+              } catch (e) {
+                console.error('Error parsing streaming data:', e);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Tool execution error:', error);
+      setLog((prev: string[]) => [...prev, `Error: Failed to execute approved tools`]);
+    } finally {
+      setIsLoading(false);
+      setPendingToolPlan(null);
+      setPendingUserInput('');
+    }
+  };
+
+  // Handle tool rejection
+  const handleToolRejection = () => {
+    setShowApproval(false);
+    setIsLoading(false);
+    setPendingToolPlan(null);
+    setPendingUserInput('');
+    setLog((prev: string[]) => [...prev, `Agent: Tool execution was cancelled by user.`]);
+    
+    // Focus input after rejection
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
+  };
+
 	// Load system message from localStorage on component mount
   useEffect(() => {
     const savedSystemMessage = localStorage.getItem('systemMessage');
@@ -317,6 +417,7 @@ export function ChatContainer() {
 }
 
 export default ChatContainer;
+
 
 
 
