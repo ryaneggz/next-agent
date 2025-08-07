@@ -34,6 +34,8 @@ export async function POST(req: NextRequest) {
     // Add user input as an event
     state = await agentMemory('user_input', input, state);
 
+    let prompt: string;
+
     // Handle tool approval workflow
     if (approveTools === false) {
       // Step 1: Classify intents and return them for approval
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
       if (validToolIntents.length === 0) {
         // No tools needed, proceed with normal flow
         state = await agentLoop(input, state, model);
-        const prompt = convertStateToXML(state) + "\n\nResponse:";
+        prompt = convertStateToXML(state) + "\n\nResponse:";
       } else {
         // Return tool plan for approval
         return NextResponse.json({
@@ -57,12 +59,12 @@ export async function POST(req: NextRequest) {
     } else if (approveTools === true && approvedTools) {
       // Step 2: Execute only approved tools
       state = await agentLoop(input, state, model, approvedTools);
+      prompt = convertStateToXML(state) + "\n\nResponse:";
     } else {
       // Default behavior: execute tools automatically (backward compatibility)
       state = await agentLoop(input, state, model);
+      prompt = convertStateToXML(state) + "\n\nResponse:";
     }
-    
-    const prompt = convertStateToXML(state) + "\n\nResponse:";
     
     // Check if streaming is requested
     if (stream) {
@@ -152,5 +154,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
 
 
