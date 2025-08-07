@@ -80,7 +80,7 @@ export default function Home() {
                           {description.examples.map((example, idx) => (
                             <li key={idx} className="flex items-start">
                               <span className="text-gray-400 mr-1">•</span>
-                              <span>"{example}"</span>
+                              <span>&quot;{example}&quot;</span>
                             </li>
                           ))}
                         </ul>
@@ -119,6 +119,7 @@ export default function Home() {
     </main>
   );
 }
+
 
 
 
