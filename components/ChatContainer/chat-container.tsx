@@ -110,7 +110,7 @@ export function ChatContainer() {
         body: JSON.stringify({ input: userMessage, model, stream: true, state: data.state || state }),
       });
 
-      if (res.headers.get('content-type')?.includes('text/event-stream')) {
+      if (streamRes.headers.get('content-type')?.includes('text/event-stream')) {
         // Handle streaming response
         const reader = res.body?.getReader();
         const decoder = new TextDecoder();
@@ -317,5 +317,6 @@ export function ChatContainer() {
 }
 
 export default ChatContainer;
+
 
 
