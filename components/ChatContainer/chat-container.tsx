@@ -328,6 +328,15 @@ export function ChatContainer() {
 					</div>
 				) : (
 					<div className="space-y-4">
+						{/* Tool Plan Approval Component */}
+						{showApproval && pendingToolPlan && (
+							<ToolPlanApproval
+								toolIntents={pendingToolPlan}
+								onApprove={handleToolApproval}
+								onReject={handleToolRejection}
+							/>
+						)}
+						
 						{log.map((line: string, i: number) => {
 							const isUser = line.startsWith('You:');
 							const isError = line.startsWith('Error:');
@@ -417,6 +426,7 @@ export function ChatContainer() {
 }
 
 export default ChatContainer;
+
 
 
 
