@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLLMResponse, getLLMResponseStream, agentLoop } from '@/lib/classify';
-import { agentMemory, ThreadState, convertStateToXML, getSystemMessage } from '@/lib/memory';
+import { agentLoop } from '@enso-labs/agent-core';
+import { ThreadState, getSystemMessage } from '@/lib/memory';
+import { AGENT_TOOLS } from '@/lib/tools';
+import { Tool } from 'langchain/tools';
 
 let state: ThreadState = {
   thread: {
@@ -27,67 +29,16 @@ export async function POST(req: NextRequest) {
     if (clientState) {
       state = clientState;
     }
+    const response = await agentLoop({
+      prompt: input,
+      model: model,
+      systemMessage: getSystemMessage(state),
+      stream: stream,
+      tools: AGENT_TOOLS as unknown as Tool<any>[]
+    });
 
-    // Get system message from thread state
-    const systemMessage = getSystemMessage(state);
-
-    // Add user input as an event
-    state = await agentMemory('user_input', input, state);
-    state = await agentLoop(input, state, model);
-    const prompt = convertStateToXML(state) + "\n\nResponse:";
-    
-    // Check if streaming is requested
     if (stream) {
-      // Return streaming response
-      const llmStream = await getLLMResponseStream(prompt, systemMessage, model);
-      
-      let fullResponse = '';
-      
-      const encoder = new TextEncoder();
-      const readable = new ReadableStream({
-        async start(controller) {
-          try {
-            // Send initial data with memory (convert to XML for compatibility)
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
-              type: 'memory', 
-              state 
-            })}\n\n`));
-            
-            // Process streaming response
-            for await (const chunk of llmStream) {
-              const content = chunk.content || '';
-              state.thread.usage = chunk.response_metadata?.usage;
-              if (content) {
-                fullResponse += content;
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
-                  type: 'content', 
-                  content: content 
-                })}\n\n`));
-              }
-            }
-            
-            // Add final response to memory
-            state = await agentMemory('llm_response', fullResponse, state);
-            
-            // Send completion message (convert to XML for compatibility)
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
-              type: 'complete', 
-              state
-            })}\n\n`));
-            
-            controller.close();
-          } catch (error) {
-            console.error('Streaming error:', error);
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
-              type: 'error', 
-              error: 'Streaming failed' 
-            })}\n\n`));
-            controller.close();
-          }
-        },
-      });
-      
-      return new Response(readable, {
+      return new Response(response as ReadableStream, {
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
@@ -95,13 +46,8 @@ export async function POST(req: NextRequest) {
         },
       });
     } else {
-      // Non-streaming response (fallback)
-      const prompt = convertStateToXML(state) + "\n\nResponse:";
-      const llmResponse = await getLLMResponse(prompt, systemMessage, model);
-      state = await agentMemory('llm_response', llmResponse, state);
-
       return NextResponse.json({ 
-        response: llmResponse, 
+        response: response, 
         state: state
       });
     }
