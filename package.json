@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@enso-labs/agent-core": "^0.0.2",
     "@langchain/anthropic": "^0.3.24",
     "@langchain/core": "^0.3.65",
     "@langchain/google-genai": "^0.2.15",

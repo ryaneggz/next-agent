@@ -81,15 +81,23 @@ export function getLatestContext(state: ThreadState): string {
 }
 
 export function convertStateToXML(state: ThreadState): string {
-  // Convert to XML format for components that still expect it
-  const events = state.thread.events.map(event => {
-    const attrs = [`intent="${event.intent}"`];
-    if (event.metadata?.type) attrs.push(`type="${event.metadata.type}"`);
-    if (event.metadata?.status) attrs.push(`status="${event.metadata.status}"`);
-    if (event.metadata?.done) attrs.push(`done="${event.metadata.done}"`);
-    
-    return `<event ${attrs.join(' ')}>${event.content}</event>`;
-  }).join('\n  ');
-  
-  return `<thread>\n${events}\n</thread>`;
+	// Convert to XML format for components that still expect it
+	const events = state.thread.events
+		.map((event: ThreadState['thread']['events'][0]) => {
+			const attrs = [`intent="${event.intent}"`];
+
+			// Add all metadata properties as attributes
+			if (event.metadata) {
+				Object.entries(event.metadata).forEach(([key, value]) => {
+					if (value !== undefined && value !== null) {
+						attrs.push(`${key}="${value}"`);
+					}
+				});
+			}
+
+			return `<event ${attrs.join(' ')}>${event.content}</event>`;
+		})
+		.join('\n  ');
+
+	return `<thread>\n${events}\n</thread>`;
 }
